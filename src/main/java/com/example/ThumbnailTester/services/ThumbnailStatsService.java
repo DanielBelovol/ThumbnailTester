@@ -14,6 +14,6 @@ public class ThumbnailStatsService {
     private ThumbnailRepository thumbnailRepository;
 
     public ThumbnailStats getByThumbnailId(long thumbnailId){
-
+        return null;
     }
 }
