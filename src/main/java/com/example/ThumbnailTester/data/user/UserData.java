@@ -23,6 +23,6 @@ public class UserData {
     @Column(nullable = false, name = "refresh_token")
     private String refreshToken;
 
-    @Column(nullable = false, name = "created_at")
+    @Column(name = "created_at", nullable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime createdAt = LocalDateTime.now();
 }

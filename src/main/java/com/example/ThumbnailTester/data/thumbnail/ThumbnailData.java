@@ -22,7 +22,7 @@ public class ThumbnailData {
     private String fileName;
 
     @Column(nullable = false, name="video_url")
-    private String videUrl;
+    private String videoUrl;
 
     @Column(nullable = false, name = "is_active")
     private boolean isActive;

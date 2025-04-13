@@ -17,7 +17,7 @@ public class ThumbnailStats {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "thumbnail_id", nullable = false)
-    private ThumbnailData thumbnailData;
+    private ThumbnailData thumbnail;
 
     private Integer views;
     private Double ctr; // Click-through rate (CTR)
@@ -29,5 +29,5 @@ public class ThumbnailStats {
     private Integer likes;
     private Integer subscribersGained;
     private Double averageViewPercentage;
-    private String totalWatchTime;
+    private Long totalWatchTime;
 }

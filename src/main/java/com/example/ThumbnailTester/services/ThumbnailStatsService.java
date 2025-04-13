@@ -14,6 +14,9 @@ public class ThumbnailStatsService {
     private ThumbnailRepository thumbnailRepository;
 
     public ThumbnailStats getByThumbnailId(long thumbnailId){
-        return null;
+        return thumbnailRepository.findById(thumbnailId).get().getStats();
+    }
+    public void save(ThumbnailStats thumbnailStats){
+        statsRepository.save(thumbnailStats);
     }
 }
