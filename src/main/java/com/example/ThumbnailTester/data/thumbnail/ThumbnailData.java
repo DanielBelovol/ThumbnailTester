@@ -21,6 +21,12 @@ public class ThumbnailData {
     @Column(nullable = false,name = "file_name")
     private String fileName;
 
+    @Column(nullable = false, name="video_url")
+    private String videUrl;
+
+    @Column(nullable = false, name = "is_active")
+    private boolean isActive;
+
     // Связь с таблицей статистики
     @OneToOne(mappedBy = "thumbnail", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private ThumbnailStats stats;

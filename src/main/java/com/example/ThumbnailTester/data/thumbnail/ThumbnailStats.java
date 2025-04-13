@@ -19,7 +19,15 @@ public class ThumbnailStats {
     @JoinColumn(name = "thumbnail_id", nullable = false)
     private ThumbnailData thumbnailData;
 
+    private Integer views;
     private Double ctr; // Click-through rate (CTR)
     private Integer impressions;
-    private Integer views;
+    private Double averageViewDuration;
+    private Double advCtr;
+    private Integer comments;
+    private Integer shares;
+    private Integer likes;
+    private Integer subscribersGained;
+    private Double averageViewPercentage;
+    private String totalWatchTime;
 }

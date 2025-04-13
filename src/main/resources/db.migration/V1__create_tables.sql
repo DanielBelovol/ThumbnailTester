@@ -1,25 +1,34 @@
--- Создание таблицы пользователей (UserData)
+-- Таблица пользователей
 CREATE TABLE users (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     google_id VARCHAR(255) NOT NULL UNIQUE,
     refresh_token VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Создание таблицы миниатюр (ThumbnailData)
+-- Таблица миниатюр
 CREATE TABLE thumbnails (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     file_name VARCHAR(255) NOT NULL,
-    user_id BIGINT NOT NULL,  -- Внешний ключ на таблицу пользователей
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    video_url VARCHAR(255) NOT NULL,
+    is_active BOOLEAN DEFAULT FALSE,
+    user_id BIGINT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Создание таблицы статистики миниатюр (ThumbnailStats)
+-- Таблица статистики миниатюр
 CREATE TABLE thumbnail_stats (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    thumbnail_id BIGINT NOT NULL,  -- Внешний ключ на таблицу миниатюр
-    ctr DOUBLE,
-    impressions INT,
+    id BIGSERIAL PRIMARY KEY,
+    thumbnail_id BIGINT NOT NULL,
     views INT,
-    FOREIGN KEY (thumbnail_id) REFERENCES thumbnails(id)
+    ctr DOUBLE PRECISION,
+    impressions INT,
+    average_view_duration DOUBLE PRECISION,
+    adv_ctr DOUBLE PRECISION,
+    comments INT,
+    likes INT,
+    subscribers_gained INT,
+    average_view_percentage DOUBLE PRECISION,
+    total_watch_time INT,  -- в секундах, например
+    FOREIGN KEY (thumbnail_id) REFERENCES thumbnails(id) ON DELETE CASCADE
 );
