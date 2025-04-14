@@ -2,8 +2,6 @@ package com.example.ThumbnailTester.services;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-
-
 import okhttp3.*;
 import org.springframework.stereotype.Service;
 

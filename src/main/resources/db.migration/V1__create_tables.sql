@@ -1,4 +1,4 @@
--- Таблица пользователей
+-- Table users
 CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,
     google_id VARCHAR(255) NOT NULL UNIQUE,
@@ -6,7 +6,7 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Таблица миниатюр
+-- Table thumbnails
 CREATE TABLE thumbnails (
     id BIGSERIAL PRIMARY KEY,
     file_name VARCHAR(255) NOT NULL,
@@ -16,7 +16,7 @@ CREATE TABLE thumbnails (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Таблица статистики миниатюр
+-- Table thumbnail
 CREATE TABLE thumbnail_stats (
     id BIGSERIAL PRIMARY KEY,
     thumbnail_id BIGINT NOT NULL,
@@ -33,7 +33,7 @@ CREATE TABLE thumbnail_stats (
     FOREIGN KEY (thumbnail_id) REFERENCES thumbnails(id) ON DELETE CASCADE
 );
 
--- Таблица конфигураций тестов миниатюр
+-- Table thumbnail-test-config
 CREATE TABLE thumbnail_test_config (
     id BIGSERIAL PRIMARY KEY,
     test_type VARCHAR(50) NOT NULL,

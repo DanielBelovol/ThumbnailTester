@@ -1,7 +1,6 @@
 package com.example.ThumbnailTester.services;
 
 import com.example.ThumbnailTester.data.thumbnail.ThumbnailData;
-import com.example.ThumbnailTester.data.user.UserData;
 import com.example.ThumbnailTester.repositories.ThumbnailRepository;
 import com.example.ThumbnailTester.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,6 +73,6 @@ public class ThumbnailService {
         double aspectRatio = (double) width / height;
 
         // Compare the aspect ratio with 16:9
-        return Math.abs(aspectRatio - (16.0 / 9.0)) < 0.01;  // Allow small error tolerance (e.g. 0.01)
+        return Math.abs(aspectRatio - (16.0 / 9.0)) < 0.01;
     }
 }

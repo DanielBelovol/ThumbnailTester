@@ -2,8 +2,6 @@ package com.example.ThumbnailTester.services;
 
 import com.example.ThumbnailTester.data.thumbnail.ThumbnailData;
 import com.example.ThumbnailTester.data.user.UserData;
-import com.example.ThumbnailTester.repositories.ThumbnailRepository;
-import com.example.ThumbnailTester.repositories.UserRepository;
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
@@ -14,8 +12,6 @@ import com.google.api.services.youtube.model.ThumbnailSetResponse;
 import com.google.api.services.youtube.model.Video;
 import com.google.api.services.youtube.model.VideoListResponse;
 import com.google.api.services.youtube.model.VideoSnippet;
-import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
