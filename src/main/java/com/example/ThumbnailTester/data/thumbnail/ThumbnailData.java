@@ -31,6 +31,9 @@ public class ThumbnailData {
     @OneToOne(mappedBy = "thumbnail", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private ThumbnailStats stats;
 
+    @OneToOne(mappedBy = "thumbnailData") // если ссылается из конфигурации
+    private ThumbnailTestConf testConf;
+
     // Связь с пользователем, который создал миниатюру
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

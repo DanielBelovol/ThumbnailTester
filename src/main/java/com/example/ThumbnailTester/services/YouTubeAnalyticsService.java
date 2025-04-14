@@ -45,7 +45,7 @@ public class YouTubeAnalyticsService {
 
         // Разбор результата
         if (analyticsResponse.getRows() == null || analyticsResponse.getRows().isEmpty()) {
-            System.out.println("Нет данных для видео: " + videoId);
+            System.out.println("No data for this video: " + videoId);
             return;
         }
 

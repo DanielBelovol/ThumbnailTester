@@ -29,6 +29,18 @@ CREATE TABLE thumbnail_stats (
     likes INT,
     subscribers_gained INT,
     average_view_percentage DOUBLE PRECISION,
-    total_watch_time INT,  -- в секундах, например
+    total_watch_time INT,
+    FOREIGN KEY (thumbnail_id) REFERENCES thumbnails(id) ON DELETE CASCADE
+);
+
+-- Таблица конфигураций тестов миниатюр
+CREATE TABLE thumbnail_test_config (
+    id BIGSERIAL PRIMARY KEY,
+    test_type VARCHAR(50) NOT NULL,
+    testing_type VARCHAR(50) NOT NULL,
+    testing_by_time_minutes BIGINT,
+    testing_by_metrics BIGINT,
+    criterion_of_winner VARCHAR(50) NOT NULL,
+    thumbnail_id BIGINT NOT NULL UNIQUE,
     FOREIGN KEY (thumbnail_id) REFERENCES thumbnails(id) ON DELETE CASCADE
 );
