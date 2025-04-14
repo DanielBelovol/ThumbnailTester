@@ -20,7 +20,7 @@ public class ThumbnailStats {
     private ThumbnailData thumbnail;
 
     private Integer views;
-    private Double ctr; // Click-through rate (CTR)
+    private Double ctr;
     private Integer impressions;
     private Double averageViewDuration;
     private Double advCtr;

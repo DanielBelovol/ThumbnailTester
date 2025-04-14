@@ -12,10 +12,11 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
-    public boolean isExistById(long id){
+    public boolean isExistById(long id) {
         return userRepository.isExistById(id);
     }
-    public Optional<UserData> getById(long id){
+
+    public Optional<UserData> getById(long id) {
         return userRepository.findById(id);
     }
 }

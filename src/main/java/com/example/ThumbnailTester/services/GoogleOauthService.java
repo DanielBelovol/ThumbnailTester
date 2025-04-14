@@ -33,7 +33,7 @@ public class GoogleOauthService {
                 .post(formBody)
                 .build();
 
-        try ( Response response = httpClient.newCall(request).execute()) {
+        try (Response response = httpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
 
             String responseBody = response.body().string();
@@ -59,5 +59,6 @@ public class GoogleOauthService {
         return payload.get("sub").getAsString(); // Google User ID
     }
 
-    public record GoogleTokenResponse(String googleId, String accessToken, String refreshToken) {}
+    public record GoogleTokenResponse(String googleId, String accessToken, String refreshToken) {
+    }
 }

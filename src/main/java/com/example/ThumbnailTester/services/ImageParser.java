@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class ImageParser {
-    public List<Image> getImagesFromBase64(WebSocketMessage webSocketMessage){
+    public List<Image> getImagesFromBase64(WebSocketMessage webSocketMessage) {
         List<byte[]> decodedImages = webSocketMessage.getImages().stream()
                 .map(base64Image -> Base64.getDecoder().decode(base64Image))
                 .collect(Collectors.toList());

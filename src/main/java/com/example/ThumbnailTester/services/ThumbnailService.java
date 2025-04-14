@@ -14,7 +14,7 @@ public class ThumbnailService {
     @Autowired
     private UserRepository userRepository;
 
-    public ThumbnailData getActiveThumbnailByUser(long userId){
+    public ThumbnailData getActiveThumbnailByUser(long userId) {
         return thumbnailRepository.findByUserIdAndIsActiveTrue(userId);
     }
 }

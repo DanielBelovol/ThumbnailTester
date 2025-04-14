@@ -6,8 +6,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Entity
 @Data
 @Table(name = "thumbnails")
@@ -18,10 +16,10 @@ public class ThumbnailData {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false,name = "file_name")
-    private String fileName;
+    @Column(nullable = false, name = "file_name")
+    private String filePath;
 
-    @Column(nullable = false, name="video_url")
+    @Column(nullable = false, name = "video_url")
     private String videoUrl;
 
     @Column(nullable = false, name = "is_active")
