@@ -17,7 +17,7 @@ public class ThumbnailData {
     private Long id;
 
     @Column(nullable = false, name = "file_name")
-    private String filePath;
+    private String fileBase64;
 
     @Column(nullable = false, name = "video_url")
     private String videoUrl;
