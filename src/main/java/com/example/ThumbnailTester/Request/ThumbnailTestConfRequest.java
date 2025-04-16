@@ -1,8 +1,5 @@
-package com.example.ThumbnailTester.DTO;
+package com.example.ThumbnailTester.Request;
 
-import com.example.ThumbnailTester.data.thumbnail.CriterionOfWinner;
-import com.example.ThumbnailTester.data.thumbnail.TestConfType;
-import com.example.ThumbnailTester.data.thumbnail.TestingType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ThumbnailTestConfDTO {
+public class ThumbnailTestConfRequest {
     private String testType;
     private String testingType;
     private long testingByTimeMinutes;

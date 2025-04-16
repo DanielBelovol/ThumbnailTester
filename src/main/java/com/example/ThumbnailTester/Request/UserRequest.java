@@ -1,4 +1,4 @@
-package com.example.ThumbnailTester.DTO;
+package com.example.ThumbnailTester.Request;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,5 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserDTO {
+public class UserRequest {
+    private String googleId;
+    private String refreshToken;
 }

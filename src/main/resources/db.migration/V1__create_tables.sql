@@ -9,9 +9,7 @@ CREATE TABLE users (
 -- Table thumbnails
 CREATE TABLE thumbnails (
     id BIGSERIAL PRIMARY KEY,
-    file_name VARCHAR(255) NOT NULL,
     video_url VARCHAR(255) NOT NULL,
-    is_active BOOLEAN DEFAULT FALSE,
     user_id BIGINT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -42,5 +40,11 @@ CREATE TABLE thumbnail_test_config (
     testing_by_metrics BIGINT,
     criterion_of_winner VARCHAR(50) NOT NULL,
     thumbnail_id BIGINT NOT NULL UNIQUE,
+    FOREIGN KEY (thumbnail_id) REFERENCES thumbnails(id) ON DELETE CASCADE
+);
+
+CREATE TABLE thumbnail_files (
+    thumbnail_id BIGINT NOT NULL,
+    file_base64 TEXT NOT NULL,
     FOREIGN KEY (thumbnail_id) REFERENCES thumbnails(id) ON DELETE CASCADE
 );

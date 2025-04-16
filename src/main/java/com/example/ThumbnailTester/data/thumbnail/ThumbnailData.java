@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Entity
 @Data
 @Table(name = "thumbnails")
@@ -16,14 +18,13 @@ public class ThumbnailData {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, name = "file_name")
-    private String fileBase64;
+    @ElementCollection
+    @CollectionTable(name = "thumbnail_files", joinColumns = @JoinColumn(name = "thumbnail_id"))
+    @Column(name = "file_base64", nullable = false)
+    private List<String> fileBase64List;
 
     @Column(nullable = false, name = "video_url")
     private String videoUrl;
-
-    @Column(nullable = false, name = "is_active")
-    private boolean isActive;
 
     // Связь с таблицей статистики
     @OneToOne(mappedBy = "thumbnail", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
