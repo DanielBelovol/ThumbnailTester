@@ -37,4 +37,12 @@ public class ThumbnailData {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private UserData user;
+
+    public ThumbnailData(List<String> fileBase64List, String videoUrl, ThumbnailStats stats, ThumbnailTestConf testConf, UserData user) {
+        this.fileBase64List = fileBase64List;
+        this.videoUrl = videoUrl;
+        this.stats = stats;
+        this.testConf = testConf;
+        this.user = user;
+    }
 }

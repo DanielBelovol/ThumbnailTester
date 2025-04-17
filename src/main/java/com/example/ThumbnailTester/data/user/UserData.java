@@ -25,4 +25,10 @@ public class UserData {
 
     @Column(name = "created_at", nullable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    public UserData(String googleId, String refreshToken) {
+        this.googleId = googleId;
+        this.refreshToken = refreshToken;
+        this.createdAt = LocalDateTime.now();
+    }
 }

@@ -12,6 +12,6 @@ import java.util.List;
 public class ThumbnailRequest {
     private List<String> fileBase64;
     private String videoUrl;
-    private ThumbnailTestConfRequest testConfDTO;
+    private ThumbnailTestConfRequest testConfRequest;
     private UserRequest userDTO;
 }
