@@ -25,6 +25,10 @@ public class ThumbnailService {
         return thumbnailRepository.findByUserIdAndIsActiveTrue(userId);
     }
 
+    public void save(ThumbnailData thumbnailData) {
+        thumbnailRepository.save(thumbnailData);
+    }
+
     public boolean isValid(String fileBase64) throws IOException {
         // Decode the base64 string to get the Image
         Image image = imageParser.getImageFromBase64(fileBase64);

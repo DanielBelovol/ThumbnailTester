@@ -19,4 +19,11 @@ public class UserService {
     public Optional<UserData> getById(long id) {
         return userRepository.findById(id);
     }
+
+    public UserData getByGoogleId(String googleId) {
+        return userRepository.findByGoogleId(googleId);
+    }
+    public void save(UserData userData){
+        userRepository.save(userData);
+    }
 }
