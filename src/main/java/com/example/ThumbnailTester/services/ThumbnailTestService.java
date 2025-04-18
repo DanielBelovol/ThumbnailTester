@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class ThumbnailTestService {
@@ -45,7 +46,7 @@ public class ThumbnailTestService {
         UserData userData = userService.getByGoogleId(userRequest.getGoogleId());
         ThumbnailTestConf testConf = mapper.testConfRequestToDTO(thumbnailRequest.getTestConfRequest());
         ThumbnailData thumbnailData = mapper.thumbnailRequestToData(thumbnailRequest);
-        List<String> files64 = thumbnailRequest.getFileBase64();
+        List<String> files64 = thumbnailRequest.getImageOptions();
         if (files64 == null || files64.isEmpty()) {
             messagingTemplate.convertAndSend("/topic/thumbnail/error", "NoImagesProvided");
             return;
@@ -61,6 +62,7 @@ public class ThumbnailTestService {
         if(!userService.isExistById(userData.getId())){
             userData = new UserData(userRequest.getGoogleId(), userRequest.getRefreshToken());
         }
+        thumbnailService.save(thumbnailData);
 
 
         long delayMillis = thumbnailRequest.getTestConfRequest().getTestingByTimeMinutes()*60*1000L;
@@ -83,7 +85,18 @@ public class ThumbnailTestService {
             messagingTemplate.convertAndSend("/topic/thumbnail/result", result);
         }, new java.util.Date(System.currentTimeMillis() + delayMillis));
     }
+    @Async
     public void startTest(ThumbnailRequest thumbnailRequest) {
 
+    }
+
+    private CompletableFuture<Void> processSingleImage(String base64, int index, long delayMillis) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
     }
 }

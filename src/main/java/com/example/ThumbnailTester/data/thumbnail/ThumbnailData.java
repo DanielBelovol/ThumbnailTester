@@ -1,6 +1,7 @@
 package com.example.ThumbnailTester.data.thumbnail;
 
 import com.example.ThumbnailTester.data.user.UserData;
+import com.example.ThumbnailTester.dto.ImageOption;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -18,10 +19,8 @@ public class ThumbnailData {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ElementCollection
-    @CollectionTable(name = "thumbnail_files", joinColumns = @JoinColumn(name = "thumbnail_id"))
-    @Column(name = "file_base64", nullable = false)
-    private List<String> fileBase64List;
+    @OneToMany(mappedBy = "thumbnail", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ImageOption> imageOptions;
 
     @Column(nullable = false, name = "video_url")
     private String videoUrl;
@@ -38,8 +37,8 @@ public class ThumbnailData {
     @JoinColumn(name = "user_id", nullable = false)
     private UserData user;
 
-    public ThumbnailData(List<String> fileBase64List, String videoUrl, ThumbnailStats stats, ThumbnailTestConf testConf, UserData user) {
-        this.fileBase64List = fileBase64List;
+    public ThumbnailData(List<ImageOption> imageOptions, String videoUrl, ThumbnailStats stats, ThumbnailTestConf testConf, UserData user) {
+        this.imageOptions = imageOptions;
         this.videoUrl = videoUrl;
         this.stats = stats;
         this.testConf = testConf;

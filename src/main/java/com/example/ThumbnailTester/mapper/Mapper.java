@@ -30,7 +30,7 @@ public class Mapper {
 
 
         ThumbnailData thumbnailData = new ThumbnailData();
-        thumbnailData.setFileBase64List(thumbnailRequest.getFileBase64());
+        thumbnailData.setImageOptions(thumbnailRequest.getImageOptions());
         thumbnailData.setVideoUrl(thumbnailRequest.getVideoUrl());
         thumbnailData.setTestConf(testConfRequestToDTO(thumbnailRequest.getTestConfRequest()));
         if(userService.isExistById(userData.getId())){
