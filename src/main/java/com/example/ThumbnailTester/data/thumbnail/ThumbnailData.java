@@ -25,10 +25,6 @@ public class ThumbnailData {
     @Column(nullable = false, name = "video_url")
     private String videoUrl;
 
-    // Связь с таблицей статистики
-    @OneToOne(mappedBy = "thumbnail", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private ThumbnailStats stats;
-
     @OneToOne(mappedBy = "thumbnailData") // если ссылается из конфигурации
     private ThumbnailTestConf testConf;
 
@@ -37,10 +33,9 @@ public class ThumbnailData {
     @JoinColumn(name = "user_id", nullable = false)
     private UserData user;
 
-    public ThumbnailData(List<ImageOption> imageOptions, String videoUrl, ThumbnailStats stats, ThumbnailTestConf testConf, UserData user) {
+    public ThumbnailData(List<ImageOption> imageOptions, String videoUrl, ThumbnailTestConf testConf, UserData user) {
         this.imageOptions = imageOptions;
         this.videoUrl = videoUrl;
-        this.stats = stats;
         this.testConf = testConf;
         this.user = user;
     }

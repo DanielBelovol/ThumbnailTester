@@ -11,6 +11,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.Random;
 
 @Service
 public class ThumbnailService {
@@ -34,7 +35,8 @@ public class ThumbnailService {
         Image image = imageParser.getImageFromBase64(fileBase64);
 
         // Create a temporary file to save the image
-        File tempFile = createTempFileFromImage(image, "thumbnail.png");
+        int number = new Random().nextInt(1000);
+        File tempFile = createTempFileFromImage(image, "thumbnail"+number+".png");
 
         // Get the file size in MB
         Double size = getFileSizeMegaBytes(tempFile);

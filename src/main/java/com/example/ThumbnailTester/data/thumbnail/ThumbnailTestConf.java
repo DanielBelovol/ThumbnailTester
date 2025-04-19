@@ -36,6 +36,4 @@ public class ThumbnailTestConf {
     @OneToOne
     @JoinColumn(name = "thumbnail_id")
     private ThumbnailData thumbnailData;
-
-
 }

@@ -28,7 +28,7 @@ CREATE TABLE thumbnail_stats (
     subscribers_gained INT,
     average_view_percentage DOUBLE PRECISION,
     total_watch_time INT,
-    FOREIGN KEY (thumbnail_id) REFERENCES thumbnails(id) ON DELETE CASCADE
+    FOREIGN KEY (thumbnail_id) REFERENCES image_options(id) ON DELETE CASCADE
 );
 
 -- Table thumbnail-test-config
@@ -43,8 +43,11 @@ CREATE TABLE thumbnail_test_config (
     FOREIGN KEY (thumbnail_id) REFERENCES thumbnails(id) ON DELETE CASCADE
 );
 
-CREATE TABLE thumbnail_files (
-    thumbnail_id BIGINT NOT NULL,
+CREATE TABLE image_options (
+    id BIGSERIAL PRIMARY KEY,
     file_base64 TEXT NOT NULL,
+    is_winner BOOLEAN DEFAULT FALSE,
+    thumbnail_id BIGINT NOT NULL,
     FOREIGN KEY (thumbnail_id) REFERENCES thumbnails(id) ON DELETE CASCADE
 );
+

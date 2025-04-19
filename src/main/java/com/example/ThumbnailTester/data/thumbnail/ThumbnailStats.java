@@ -1,5 +1,6 @@
 package com.example.ThumbnailTester.data.thumbnail;
 
+import com.example.ThumbnailTester.dto.ImageOption;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -15,9 +16,9 @@ public class ThumbnailStats {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "thumbnail_id", nullable = false)
-    private ThumbnailData thumbnail;
+    private ImageOption imageOption;
 
     private Integer views;
     private Double ctr;

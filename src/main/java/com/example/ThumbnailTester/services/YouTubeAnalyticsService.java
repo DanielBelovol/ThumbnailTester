@@ -51,7 +51,7 @@ public class YouTubeAnalyticsService {
 
         List<Object> data = analyticsResponse.getRows().get(0);
         ThumbnailStats stats = new ThumbnailStats();
-        stats.setThumbnail(activeThumbnail);
+        stats.setImageOption(activeThumbnail);
         stats.setViews(toInt(data.get(0)));
         stats.setComments(toInt(data.get(1)));
         stats.setLikes(toInt(data.get(2)));

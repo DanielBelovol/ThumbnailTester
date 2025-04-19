@@ -5,6 +5,7 @@ import com.example.ThumbnailTester.Request.UserRequest;
 import com.example.ThumbnailTester.data.thumbnail.ThumbnailData;
 import com.example.ThumbnailTester.data.thumbnail.ThumbnailTestConf;
 import com.example.ThumbnailTester.data.user.UserData;
+import com.example.ThumbnailTester.dto.ImageOption;
 import com.example.ThumbnailTester.mapper.Mapper;
 import com.example.ThumbnailTester.result.ThumbnailResult;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,19 +42,19 @@ public class ThumbnailTestService {
     }
 
     @Async
-    public void runTest(ThumbnailRequest thumbnailRequest) throws IOException {
+    public void runThumbnailTest(ThumbnailRequest thumbnailRequest) throws IOException {
         UserRequest userRequest = thumbnailRequest.getUserDTO();
         UserData userData = userService.getByGoogleId(userRequest.getGoogleId());
         ThumbnailTestConf testConf = mapper.testConfRequestToDTO(thumbnailRequest.getTestConfRequest());
         ThumbnailData thumbnailData = mapper.thumbnailRequestToData(thumbnailRequest);
-        List<String> files64 = thumbnailRequest.getImageOptions();
-        if (files64 == null || files64.isEmpty()) {
+        List<ImageOption> imageOptions = thumbnailRequest.getImageOptions();
+        if (imageOptions == null || imageOptions.isEmpty()) {
             messagingTemplate.convertAndSend("/topic/thumbnail/error", "NoImagesProvided");
             return;
         }
         //verifying that image is supported
-        for(String base64:files64){
-            if(!thumbnailService.isValid(base64)){
+        for(ImageOption option:imageOptions){
+            if(!thumbnailService.isValid(option.getFileBase64())){
                 messagingTemplate.convertAndSend("/topic/thumbnail/error", "UnsupportedImage");
                 return;
             }

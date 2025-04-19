@@ -13,10 +13,6 @@ public class ThumbnailStatsService {
     @Autowired
     private ThumbnailRepository thumbnailRepository;
 
-    public ThumbnailStats getByThumbnailId(long thumbnailId) {
-        return thumbnailRepository.findById(thumbnailId).get().getStats();
-    }
-
     public void save(ThumbnailStats thumbnailStats) {
         statsRepository.save(thumbnailStats);
     }
