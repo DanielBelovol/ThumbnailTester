@@ -5,6 +5,7 @@ import lombok.Data;
 
 @Data
 public class ImageResult {
+    long imageIndex;
     String fileBase64;
     ThumbnailStats thumbnailStats;
     boolean isWinner;

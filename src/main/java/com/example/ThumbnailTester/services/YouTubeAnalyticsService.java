@@ -3,9 +3,11 @@ package com.example.ThumbnailTester.services;
 import com.example.ThumbnailTester.data.thumbnail.ThumbnailData;
 import com.example.ThumbnailTester.data.thumbnail.ThumbnailStats;
 import com.example.ThumbnailTester.data.user.UserData;
+import com.example.ThumbnailTester.mapper.Mapper;
 import com.google.api.services.youtube.YouTube;
 import com.google.api.services.youtubeAnalytics.YouTubeAnalytics;
 import com.google.api.services.youtubeAnalytics.model.ResultTable;
+import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +27,8 @@ public class YouTubeAnalyticsService {
     private UserService userService;
     @Autowired
     private ThumbnailService thumbnailService;
+    @Autowired
+    private Mapper mapper;
 
     public void fetchAndSaveStats(UserData user) throws IOException {
         // Получаем активную миниатюру
@@ -51,7 +55,7 @@ public class YouTubeAnalyticsService {
 
         List<Object> data = analyticsResponse.getRows().get(0);
         ThumbnailStats stats = new ThumbnailStats();
-        stats.setImageOption(activeThumbnail);
+        stats.setImageOption(mapper.thumbnailDataToImageOption(activeThumbnail));
         stats.setViews(toInt(data.get(0)));
         stats.setComments(toInt(data.get(1)));
         stats.setLikes(toInt(data.get(2)));

@@ -4,6 +4,8 @@ import com.example.ThumbnailTester.Request.ThumbnailRequest;
 import com.example.ThumbnailTester.Request.ThumbnailTestConfRequest;
 import com.example.ThumbnailTester.data.thumbnail.*;
 import com.example.ThumbnailTester.data.user.UserData;
+import com.example.ThumbnailTester.dto.ImageOption;
+import com.example.ThumbnailTester.services.ImageParser;
 import com.example.ThumbnailTester.services.UserService;
 import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,5 +41,10 @@ public class Mapper {
             thumbnailData.setUser(new UserData(thumbnailRequest.getUserDTO().getGoogleId(), thumbnailRequest.getUserDTO().getRefreshToken()));
         }
         return thumbnailData;
+    }
+    public ImageOption thumbnailDataToImageOption(ThumbnailData thumbnailData){
+        ImageOption imageOption = new ImageOption();
+//        imageOption.set
+        return imageOption;
     }
 }

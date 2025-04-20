@@ -12,6 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 public class ThumbnailRequest {
     private List<ImageOption> imageOptions;
+    private List<String> texts;
     private String videoUrl;
     private ThumbnailTestConfRequest testConfRequest;
     private UserRequest userDTO;

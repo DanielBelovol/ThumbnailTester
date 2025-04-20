@@ -50,4 +50,9 @@ CREATE TABLE image_options (
     thumbnail_id BIGINT NOT NULL,
     FOREIGN KEY (thumbnail_id) REFERENCES thumbnails(id) ON DELETE CASCADE
 );
+CREATE TABLE thumbnail_texts (
+    thumbnail_id BIGINT NOT NULL,
+    text VARCHAR(255),
+    FOREIGN KEY (thumbnail_id) REFERENCES thumbnails(id) ON DELETE CASCADE
+);
 
