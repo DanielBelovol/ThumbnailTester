@@ -27,26 +27,6 @@ public class YouTubeService {
     private final static String CLIENT_ID = "CLIENT_ID";
     private final static String CLIENT_SECRET = "CLIENT_SECRET";
 
-    public void updateVideoTitleAndThumbnail(UserData user, ThumbnailData thumbnailData, String newTitle, File thumbnailFile) throws IOException, GeneralSecurityException {
-        // Build credential from refresh token
-        Credential credential = buildCredentialFromRefreshToken(user);
-
-        // Build YouTube service
-        YouTube youtube = new YouTube.Builder(
-                credential.getTransport(),
-                credential.getJsonFactory(),
-                credential)
-                .setApplicationName("ThumbnailTester")
-                .build();
-
-        // Step 1: Update video title
-        updateVideoTitle(user, getVideoIdFromUrl(thumbnailData.getVideoUrl()), newTitle);
-
-        // Step 2: Upload new thumbnail
-        uploadThumbnail(thumbnailData, thumbnailFile);
-    }
-
-
     public ThumbnailSetResponse uploadThumbnail(ThumbnailData thumbnailData, File thumbnailFile) throws IOException, GeneralSecurityException {
         Credential credential = buildCredentialFromRefreshToken(thumbnailData.getUser());
         YouTube youTube = new YouTube.Builder(
