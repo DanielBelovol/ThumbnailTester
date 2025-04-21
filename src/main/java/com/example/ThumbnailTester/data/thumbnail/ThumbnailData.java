@@ -22,11 +22,6 @@ public class ThumbnailData {
     @OneToMany(mappedBy = "thumbnail", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ImageOption> imageOptions;
 
-    @ElementCollection
-    @CollectionTable(name = "thumbnail_texts", joinColumns = @JoinColumn(name = "thumbnail_id"))
-    @Column(name = "text")
-    private List<String> texts;
-
     @Column(nullable = false, name = "video_url")
     private String videoUrl;
 

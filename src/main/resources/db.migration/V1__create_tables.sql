@@ -46,13 +46,10 @@ CREATE TABLE thumbnail_test_config (
 CREATE TABLE image_options (
     id BIGSERIAL PRIMARY KEY,
     file_base64 TEXT NOT NULL,
+    text VARCHAR(255),
     is_winner BOOLEAN DEFAULT FALSE,
     thumbnail_id BIGINT NOT NULL,
     FOREIGN KEY (thumbnail_id) REFERENCES thumbnails(id) ON DELETE CASCADE
 );
-CREATE TABLE thumbnail_texts (
-    thumbnail_id BIGINT NOT NULL,
-    text VARCHAR(255),
-    FOREIGN KEY (thumbnail_id) REFERENCES thumbnails(id) ON DELETE CASCADE
-);
+
 

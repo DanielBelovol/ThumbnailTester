@@ -21,6 +21,9 @@ public class ImageOption {
     @Column(name = "file_base64", nullable = false, columnDefinition = "TEXT")
     private String fileBase64;
 
+    @Column(name = "text")
+    private String text;
+
     @Column(name = "is_winner")
     private boolean isWinner;
 

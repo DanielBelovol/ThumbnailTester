@@ -12,6 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.util.Date;
 import java.util.List;
 
 @Service
@@ -30,19 +32,19 @@ public class YouTubeAnalyticsService {
     @Autowired
     private Mapper mapper;
 
-    public void fetchAndSaveStats(UserData user) throws IOException {
+    public ThumbnailStats getStats(UserData user, LocalDate startDate) throws IOException {
         // Получаем активную миниатюру
         ThumbnailData activeThumbnail = thumbnailService.getActiveThumbnailByUser(user.getId());
         if (activeThumbnail == null) {
             System.out.println("Нет активной миниатюры для пользователя");
-            return;
+            return null;
         }
 
         String videoId = extractVideoIdFromUrl(activeThumbnail.getVideoUrl());
 
         // Выполняем запрос к YouTube Analytics API
         ResultTable analyticsResponse = youTubeAnalytics.reports()
-                .query("channel==MINE", "2024-01-01", "2025-12-31",
+                .query("channel==MINE", startDate.toString(), "2025-12-31",
                         "views,comments,likes,subscribersGained,shares,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,impressions,impressionsClickThroughRate")
                 .setFilters("video==" + videoId)
                 .execute();
@@ -50,7 +52,7 @@ public class YouTubeAnalyticsService {
         // Разбор результата
         if (analyticsResponse.getRows() == null || analyticsResponse.getRows().isEmpty()) {
             System.out.println("No data for this video: " + videoId);
-            return;
+            return null;
         }
 
         List<Object> data = analyticsResponse.getRows().get(0);
@@ -66,9 +68,15 @@ public class YouTubeAnalyticsService {
         stats.setAverageViewPercentage(toDouble(data.get(7)));
         stats.setImpressions(toInt(data.get(8)));
         stats.setCtr(toDouble(data.get(9)));
-        stats.setAdvCtr(null); // Расчётный, если хочешь — можно вывести отдельно
+        // Calculate adv (average daily view duration)
+        long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(startDate, LocalDate.now());
+        if (daysBetween > 0) {
+            stats.setAdvCtr((double) stats.getTotalWatchTime() / daysBetween);
+        } else {
+            stats.setAdvCtr(0.0); // Default to 0 if the period is invalid
+        }
 
-        thumbnailStatsService.save(stats);
+        return stats;
     }
 
     private String extractVideoIdFromUrl(String url) {
