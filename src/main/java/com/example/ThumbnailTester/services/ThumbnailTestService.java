@@ -1,11 +1,13 @@
 package com.example.ThumbnailTester.services;
 
+import com.example.ThumbnailTester.Request.StatsRequest;
 import com.example.ThumbnailTester.Request.ThumbnailRequest;
 import com.example.ThumbnailTester.Request.UserRequest;
 import com.example.ThumbnailTester.data.thumbnail.*;
 import com.example.ThumbnailTester.data.user.UserData;
 import com.example.ThumbnailTester.dto.ImageOption;
 import com.example.ThumbnailTester.mapper.Mapper;
+import com.example.ThumbnailTester.repositories.ThumbnailRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.TaskScheduler;
@@ -43,6 +45,8 @@ public class ThumbnailTestService {
     private ImageParser imageParser;
     @Autowired
     private Mapper mapper;
+    @Autowired
+    private ThumbnailRepository thumbnailRepository;
 
     /**
      * Constructor for ThumbnailTestService.
@@ -221,5 +225,28 @@ public class ThumbnailTestService {
                 throw new RuntimeException("Error in processSingleTest: " + e.getMessage());
             }
         });
+    }
+    public void updateThumbnailStats(StatsRequest statsRequest, int index) {
+        ThumbnailData thumbnail = thumbnailRepository.findByVideoUrl(statsRequest.getVideoUrl());
+
+        if (thumbnail != null) {
+            // Обновляем статистику для миниатюры
+            ThumbnailStats stats = new ThumbnailStats();
+            stats.setViews(statsRequest.getViews());
+            stats.setCtr(statsRequest.getCtr());
+            stats.setImpressions(statsRequest.getImpressions());
+            stats.setAverageViewDuration(statsRequest.getAverageViewDuration());
+            stats.setAdvCtr(statsRequest.getAdvCtr());
+            stats.setComments(statsRequest.getComments());
+            stats.setShares(statsRequest.getShares());
+            stats.setLikes(statsRequest.getLikes());
+            stats.setSubscribersGained(statsRequest.getSubscribersGained());
+            stats.setAverageViewPercentage(statsRequest.getAverageViewPercentage());
+            stats.setTotalWatchTime(statsRequest.getTotalWatchTime());
+
+            // Сохраняем обновленные данные статистики
+            thumbnail.getImageOptions().get(index);
+            thumbnailRepository.save(thumbnail);
+        }
     }
 }

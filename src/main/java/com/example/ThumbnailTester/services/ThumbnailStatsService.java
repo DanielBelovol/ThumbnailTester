@@ -1,8 +1,11 @@
 package com.example.ThumbnailTester.services;
 
+import com.example.ThumbnailTester.Request.StatsRequest;
+import com.example.ThumbnailTester.data.thumbnail.ThumbnailData;
 import com.example.ThumbnailTester.data.thumbnail.ThumbnailStats;
 import com.example.ThumbnailTester.repositories.ThumbnailRepository;
 import com.example.ThumbnailTester.repositories.ThumbnailStatsRepository;
+import com.google.api.services.youtube.model.Thumbnail;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

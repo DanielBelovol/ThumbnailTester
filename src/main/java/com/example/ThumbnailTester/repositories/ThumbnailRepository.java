@@ -14,4 +14,6 @@ public interface ThumbnailRepository extends JpaRepository<ThumbnailData, Long> 
 
     List<ThumbnailData> findAllByUserId(long userID);
 
+    ThumbnailData findByVideoUrl(String videoUrl);
+
 }
