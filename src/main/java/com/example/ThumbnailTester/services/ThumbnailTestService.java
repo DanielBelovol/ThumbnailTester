@@ -3,7 +3,10 @@ package com.example.ThumbnailTester.services;
 import com.example.ThumbnailTester.Request.StatsRequest;
 import com.example.ThumbnailTester.Request.ThumbnailRequest;
 import com.example.ThumbnailTester.Request.UserRequest;
-import com.example.ThumbnailTester.data.thumbnail.*;
+import com.example.ThumbnailTester.data.thumbnail.TestConfType;
+import com.example.ThumbnailTester.data.thumbnail.ThumbnailData;
+import com.example.ThumbnailTester.data.thumbnail.ThumbnailStats;
+import com.example.ThumbnailTester.data.thumbnail.ThumbnailTestConf;
 import com.example.ThumbnailTester.data.user.UserData;
 import com.example.ThumbnailTester.dto.ImageOption;
 import com.example.ThumbnailTester.mapper.Mapper;
@@ -202,7 +205,7 @@ public class ThumbnailTestService {
                 Thread.sleep(delayMillis);
 
                 // Fetch and save statistics
-                ThumbnailStats stats = youTubeAnalyticsService.getStats(thumbnailData.getUser(), LocalDate.now());
+                ThumbnailStats stats = youTubeAnalyticsService.getStats(thumbnailData.getUser(),thumbnailData, LocalDate.now());
                 if (stats != null) {
                     ImageOption imageOption = thumbnailData.getImageOptions().get(index);
 

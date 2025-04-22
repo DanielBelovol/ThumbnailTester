@@ -13,7 +13,7 @@ public class UserService {
     private UserRepository userRepository;
 
     public boolean isExistById(long id) {
-        return userRepository.isExistById(id);
+        return userRepository.existsById(id);
     }
 
     public Optional<UserData> getById(long id) {

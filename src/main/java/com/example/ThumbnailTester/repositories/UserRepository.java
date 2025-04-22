@@ -6,7 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface UserRepository extends JpaRepository<UserData, Long> {
-    boolean isExistById(Long id);
+    boolean existsById(Long id);
     UserData findByGoogleId(String googleId);
-
 }

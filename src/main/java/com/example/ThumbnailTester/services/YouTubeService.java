@@ -12,9 +12,9 @@ import com.google.api.services.youtube.model.ThumbnailSetResponse;
 import com.google.api.services.youtube.model.Video;
 import com.google.api.services.youtube.model.VideoListResponse;
 import com.google.api.services.youtube.model.VideoSnippet;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -22,10 +22,14 @@ import java.security.GeneralSecurityException;
 @Service
 
 public class YouTubeService {
+    @Value("${youtube.client.id}")
+    private String clientId;
 
+    @Value("${youtube.client.secret}")
+    private String clientSecret;
 
-    private final static String CLIENT_ID = "CLIENT_ID";
-    private final static String CLIENT_SECRET = "CLIENT_SECRET";
+    @Value("${application.name}")
+    private String applicationName;
 
     public ThumbnailSetResponse uploadThumbnail(ThumbnailData thumbnailData, File thumbnailFile) throws IOException, GeneralSecurityException {
         Credential credential = buildCredentialFromRefreshToken(thumbnailData.getUser());
@@ -33,7 +37,7 @@ public class YouTubeService {
                 credential.getTransport(),
                 credential.getJsonFactory(),
                 credential)
-                .setApplicationName("ThumbnailTester")
+                .setApplicationName(applicationName)
                 .build();
         FileContent mediaContent = new FileContent("image/jpeg", thumbnailFile);
 
@@ -50,7 +54,7 @@ public class YouTubeService {
                 credential.getTransport(),
                 credential.getJsonFactory(),
                 credential)
-                .setApplicationName("ThumbnailTester")
+                .setApplicationName(applicationName)
                 .build();
 
         // Получить видео через YouTube API
@@ -81,7 +85,7 @@ public class YouTubeService {
         return new GoogleCredential.Builder()
                 .setTransport(GoogleNetHttpTransport.newTrustedTransport())
                 .setJsonFactory(JacksonFactory.getDefaultInstance())
-                .setClientSecrets(CLIENT_ID, CLIENT_SECRET)
+                .setClientSecrets(clientId, clientSecret)
                 .build()
                 .setRefreshToken(user.getRefreshToken());
     }

@@ -7,18 +7,18 @@ import com.example.ThumbnailTester.mapper.Mapper;
 import com.google.api.services.youtube.YouTube;
 import com.google.api.services.youtubeAnalytics.YouTubeAnalytics;
 import com.google.api.services.youtubeAnalytics.model.ResultTable;
-import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.time.LocalDate;
-import java.util.Date;
 import java.util.List;
 
 @Service
 public class YouTubeAnalyticsService {
-    private static final String APPLICATION_NAME = "YourApplicationName";
+    @Value("${application.name}")
+    private String applicationName;
     @Autowired
     private YouTube youTube;
     @Autowired
@@ -32,9 +32,9 @@ public class YouTubeAnalyticsService {
     @Autowired
     private Mapper mapper;
 
-    public ThumbnailStats getStats(UserData user, LocalDate startDate) throws IOException {
+    public ThumbnailStats getStats(UserData user,ThumbnailData thumbnailData , LocalDate startDate) throws IOException {
         // Получаем активную миниатюру
-        ThumbnailData activeThumbnail = thumbnailService.getActiveThumbnailByUser(user.getId());
+        ThumbnailData activeThumbnail = thumbnailData;
         if (activeThumbnail == null) {
             System.out.println("Нет активной миниатюры для пользователя");
             return null;

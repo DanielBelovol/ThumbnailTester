@@ -29,6 +29,6 @@ public class WebSocketController {
     }
     @MessageMapping("/thumbnail/stats/post")
     public void handleStatsMessage(@Payload StatsRequest statsRequest){
-
+        System.out.println("Received stats request: " + statsRequest.toString());
     }
 }

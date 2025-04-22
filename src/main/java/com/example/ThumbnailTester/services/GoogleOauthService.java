@@ -3,6 +3,7 @@ package com.example.ThumbnailTester.services;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import okhttp3.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -11,6 +12,10 @@ import java.util.Base64;
 @Service
 public class GoogleOauthService {
     private final OkHttpClient httpClient = new OkHttpClient();
+//    @Value("${google.client.id}")
+//    private String clientId;
+//    @Value("${google.client.secret}")
+//    private String clientSecret;
 
     private static final String TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
     private static final String CLIENT_ID = "YOUR_CLIENT_ID";

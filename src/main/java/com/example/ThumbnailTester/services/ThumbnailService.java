@@ -22,10 +22,6 @@ public class ThumbnailService {
     @Autowired
     private ImageParser imageParser;
 
-    public ThumbnailData getActiveThumbnailByUser(long userId) {
-        return thumbnailRepository.findByUserIdAndIsActiveTrue(userId);
-    }
-
     public void save(ThumbnailData thumbnailData) {
         thumbnailRepository.save(thumbnailData);
     }

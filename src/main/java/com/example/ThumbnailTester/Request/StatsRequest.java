@@ -19,5 +19,24 @@ public class StatsRequest {
     private Long totalWatchTime;
 
     private Boolean active;
+
+    @Override
+    public String toString() {
+        return "StatsRequest{" +
+                "videoUrl='" + videoUrl + '\'' +
+                ", views=" + views +
+                ", ctr=" + ctr +
+                ", impressions=" + impressions +
+                ", averageViewDuration=" + averageViewDuration +
+                ", advCtr=" + advCtr +
+                ", comments=" + comments +
+                ", shares=" + shares +
+                ", likes=" + likes +
+                ", subscribersGained=" + subscribersGained +
+                ", averageViewPercentage=" + averageViewPercentage +
+                ", totalWatchTime=" + totalWatchTime +
+                ", active=" + active +
+                '}';
+    }
 }
 
