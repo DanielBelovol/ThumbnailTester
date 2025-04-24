@@ -12,5 +12,4 @@ public class ThumbnailTesterApplication {
         SpringApplication.run(ThumbnailTesterApplication.class, args);
 
     }
-
 }
