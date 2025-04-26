@@ -56,8 +56,6 @@ public class ThumbnailTestService {
     @Autowired
     private ThumbnailQueueService thumbnailQueueService;
 
-    private ThumbnailQueue thumbnailQueue;
-
     /**
      * Constructor for ThumbnailTestService.
      *
@@ -69,13 +67,6 @@ public class ThumbnailTestService {
         this.taskScheduler = taskScheduler;
     }
 
-    /**
-     * Runs a thumbnail test based on the provided request.
-     * This method validates inputs, saves thumbnail data, and starts the test process.
-     *
-     * @param thumbnailRequest the request containing test configuration and image options
-     * @throws IOException if an error occurs during file processing
-     */
     @Async
     public void runThumbnailTest(ThumbnailRequest thumbnailRequest) throws IOException {
         // Retrieve user data from the request
@@ -85,11 +76,6 @@ public class ThumbnailTestService {
         // Map test configuration and thumbnail data
         ThumbnailTestConf testConf = mapper.testConfRequestToDTO(thumbnailRequest.getTestConfRequest());
         ThumbnailData thumbnailData = mapper.thumbnailRequestToData(thumbnailRequest);
-
-        ThumbnailQueue thumbnailQueue = new ThumbnailQueue();
-        for (ImageOption imageOption : thumbnailData.getImageOptions()) {
-            thumbnailQueue.add(new ThumbnailQueueItem(thumbnailRequest.getVideoUrl(), imageOption));
-        }
 
         List<ImageOption> imageOptions = thumbnailRequest.getImageOptions();
 
@@ -128,46 +114,31 @@ public class ThumbnailTestService {
         }, new java.util.Date(System.currentTimeMillis() + delayMillis));
     }
 
-    /**
-     * Retrieves the test results for the given thumbnail data.
-     *
-     * @param thumbnailData the thumbnail data containing image options
-     * @return a list of image options representing the test results
-     */
     private List<ImageOption> getTestResults(ThumbnailData thumbnailData) {
         return thumbnailData.getImageOptions();
     }
 
-    /**
-     * Starts the test process for the given thumbnail request.
-     * This method processes each image or text option asynchronously.
-     *
-     * @param thumbnailRequest the request containing test configuration and image options
-     * @param testConfType     the type of test to run (e.g., THUMBNAIL, TEXT, THUMBNAILTEXT)
-     * @param thumbnailData    the thumbnail data to be tested
-     * @throws IOException if an error occurs during file processing
-     */
     @Async
     public void startTest(ThumbnailRequest thumbnailRequest, TestConfType testConfType, ThumbnailData thumbnailData) throws IOException {
         List<ImageOption> files64 = thumbnailRequest.getImageOptions();
         List<String> texts = thumbnailRequest.getTexts();
         long delayMillis = thumbnailRequest.getTestConfRequest().getTestingByTimeMinutes() * 60 * 1000L;
-        ThumbnailQueue thumbnailQueue = new ThumbnailQueue();
 
-        //initialize
+        // Initialize queue for the video URL
+        ThumbnailQueue thumbnailQueue = thumbnailQueueService.getQueue(thumbnailRequest.getVideoUrl());
+
+        // Add all image options to the queue
         for (ImageOption imageOption : thumbnailData.getImageOptions()) {
             thumbnailQueue.add(new ThumbnailQueueItem(thumbnailRequest.getVideoUrl(), imageOption));
         }
 
         CompletableFuture<Void> chain = CompletableFuture.completedFuture(null);
 
-
         // Determine the number of tests to run based on the test configuration type
         int count = switch (testConfType) {
             case THUMBNAIL -> files64 != null ? files64.size() : 0;
             case TEXT -> texts != null ? texts.size() : 0;
-            case THUMBNAILTEXT ->
-                    (files64 != null && texts != null && files64.size() == texts.size()) ? files64.size() : 0;
+            case THUMBNAILTEXT -> (files64 != null && texts != null && files64.size() == texts.size()) ? files64.size() : 0;
         };
 
         if (count == 0) {
@@ -179,7 +150,8 @@ public class ThumbnailTestService {
         // Process each test asynchronously
         while ((thumbnailQueueItem = thumbnailQueue.poll()) != null) {
             final ThumbnailQueueItem currentItem = thumbnailQueueItem;
-            // Удаляем текущий элемент из очереди
+
+            // Remove the current item from the queue
             thumbnailQueue.delete(currentItem);
 
             currentItem.setActive(true);
@@ -188,20 +160,10 @@ public class ThumbnailTestService {
             ));
         }
 
-
         // Notify when all tests are completed
         chain.thenRun(() -> messagingTemplate.convertAndSend("/topic/thumbnail/done", "Test for all images with videoUrl " + thumbnailRequest.getVideoUrl() + " completed"));
     }
 
-    /**
-     * Processes a single test for a thumbnail or text.
-     * This method updates the thumbnail or video title, fetches analytics data, and sends progress notifications.
-     *
-     * @param thumbnailData the thumbnail data to be tested
-     * @param delayMillis   the delay between tests in milliseconds
-     * @param testConfType  the type of test to run (e.g., THUMBNAIL, TEXT, THUMBNAILTEXT)
-     * @return a CompletableFuture representing the asynchronous operation
-     */
     private CompletableFuture<Void> processSingleTest(
             ThumbnailData thumbnailData,
             ThumbnailQueueItem thumbnailQueueItem,
@@ -245,30 +207,5 @@ public class ThumbnailTestService {
                 throw new RuntimeException("Error in processSingleTest: " + e.getMessage());
             }
         });
-    }
-
-
-    public void updateThumbnailStats(StatsRequest statsRequest, int index) {
-        ThumbnailData thumbnail = thumbnailRepository.findByVideoUrl(statsRequest.getVideoUrl());
-
-        if (thumbnail != null) {
-            // Обновляем статистику для миниатюры
-            ThumbnailStats stats = new ThumbnailStats();
-            stats.setViews(statsRequest.getViews());
-            stats.setCtr(statsRequest.getCtr());
-            stats.setImpressions(statsRequest.getImpressions());
-            stats.setAverageViewDuration(statsRequest.getAverageViewDuration());
-            stats.setAdvCtr(statsRequest.getAdvCtr());
-            stats.setComments(statsRequest.getComments());
-            stats.setShares(statsRequest.getShares());
-            stats.setLikes(statsRequest.getLikes());
-            stats.setSubscribersGained(statsRequest.getSubscribersGained());
-            stats.setAverageViewPercentage(statsRequest.getAverageViewPercentage());
-            stats.setTotalWatchTime(statsRequest.getTotalWatchTime());
-
-            // Сохраняем обновленные данные статистики
-            thumbnail.getImageOptions().get(index);
-            thumbnailRepository.save(thumbnail);
-        }
     }
 }

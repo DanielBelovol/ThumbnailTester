@@ -2,41 +2,42 @@ package com.example.ThumbnailTester.services;
 
 import com.example.ThumbnailTester.dto.ThumbnailQueue;
 import com.example.ThumbnailTester.dto.ThumbnailQueueItem;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class ThumbnailQueueService {
-    private ThumbnailQueue thumbnailQueue;
+    private final Map<String, ThumbnailQueue> thumbnailQueues = new ConcurrentHashMap<>();
 
-    public ThumbnailQueueService() {
-        this.thumbnailQueue = new ThumbnailQueue();
+    public ThumbnailQueue getQueue(String videoUrl) {
+        return thumbnailQueues.computeIfAbsent(videoUrl, k -> new ThumbnailQueue());
     }
 
-    // Add a new item to the queue
-    public void add(ThumbnailQueueItem item) {
-        thumbnailQueue.add(item);
+    public void addToQueue(String videoUrl, ThumbnailQueueItem item) {
+        getQueue(videoUrl).add(item);
     }
 
-    // Delete a specific item from the queue
-    public boolean delete(ThumbnailQueueItem item) {
-        return thumbnailQueue.delete(item);
+    public ThumbnailQueueItem pollFromQueue(String videoUrl) {
+        ThumbnailQueue queue = thumbnailQueues.get(videoUrl);
+        if (queue == null) return null;
+        return queue.poll();
     }
 
-    // Retrieve and remove the next item from the queue
-    public ThumbnailQueueItem next() {
-        return thumbnailQueue.poll();
+    public ThumbnailQueue findItemByVideoUrl(String videoUrl) {
+        ThumbnailQueue queue = thumbnailQueues.get(videoUrl);
+        return queue;
     }
 
-    // Check if the queue is empty
-    public boolean isEmpty() {
-        return thumbnailQueue.isEmpty();
-    }
-    public ThumbnailQueue getThumbnailQueue() {
-        return thumbnailQueue;
+    public void deleteFromQueue(String videoUrl, ThumbnailQueueItem item) {
+        ThumbnailQueue queue = thumbnailQueues.get(videoUrl);
+        if (queue != null) {
+            queue.delete(item);
+        }
     }
 
-    public void setThumbnailQueue(ThumbnailQueue thumbnailQueue) {
-        this.thumbnailQueue = thumbnailQueue;
+    public void clearQueue(String videoUrl) {
+        thumbnailQueues.remove(videoUrl);
     }
 }

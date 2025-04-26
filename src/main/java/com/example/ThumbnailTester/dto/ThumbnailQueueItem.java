@@ -1,7 +1,5 @@
 package com.example.ThumbnailTester.dto;
 
-import com.example.ThumbnailTester.data.thumbnail.ThumbnailData;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data

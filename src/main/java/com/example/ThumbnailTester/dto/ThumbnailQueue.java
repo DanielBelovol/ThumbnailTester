@@ -24,4 +24,12 @@ public class ThumbnailQueue {
     public boolean isEmpty() {
         return queue.isEmpty();
     }
+    public ThumbnailQueueItem findByImageId(long id) {
+        for (ThumbnailQueueItem item : queue) {
+            if(item.getImageOption().getId() == id) {
+                return item;
+            }
+        }
+        return null;
+    }
 }
