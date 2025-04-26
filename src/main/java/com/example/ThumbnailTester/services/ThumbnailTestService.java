@@ -9,6 +9,8 @@ import com.example.ThumbnailTester.data.thumbnail.ThumbnailStats;
 import com.example.ThumbnailTester.data.thumbnail.ThumbnailTestConf;
 import com.example.ThumbnailTester.data.user.UserData;
 import com.example.ThumbnailTester.dto.ImageOption;
+import com.example.ThumbnailTester.dto.ThumbnailQueue;
+import com.example.ThumbnailTester.dto.ThumbnailQueueItem;
 import com.example.ThumbnailTester.mapper.Mapper;
 import com.example.ThumbnailTester.repositories.ThumbnailRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +53,11 @@ public class ThumbnailTestService {
     @Autowired
     private ThumbnailRepository thumbnailRepository;
 
+    @Autowired
+    private ThumbnailQueueService thumbnailQueueService;
+
+    private ThumbnailQueue thumbnailQueue;
+
     /**
      * Constructor for ThumbnailTestService.
      *
@@ -78,6 +85,12 @@ public class ThumbnailTestService {
         // Map test configuration and thumbnail data
         ThumbnailTestConf testConf = mapper.testConfRequestToDTO(thumbnailRequest.getTestConfRequest());
         ThumbnailData thumbnailData = mapper.thumbnailRequestToData(thumbnailRequest);
+
+        ThumbnailQueue thumbnailQueue = new ThumbnailQueue();
+        for (ImageOption imageOption : thumbnailData.getImageOptions()) {
+            thumbnailQueue.add(new ThumbnailQueueItem(thumbnailRequest.getVideoUrl(), imageOption));
+        }
+
         List<ImageOption> imageOptions = thumbnailRequest.getImageOptions();
 
         // Validate image options
@@ -139,8 +152,15 @@ public class ThumbnailTestService {
         List<ImageOption> files64 = thumbnailRequest.getImageOptions();
         List<String> texts = thumbnailRequest.getTexts();
         long delayMillis = thumbnailRequest.getTestConfRequest().getTestingByTimeMinutes() * 60 * 1000L;
+        ThumbnailQueue thumbnailQueue = new ThumbnailQueue();
+
+        //initialize
+        for (ImageOption imageOption : thumbnailData.getImageOptions()) {
+            thumbnailQueue.add(new ThumbnailQueueItem(thumbnailRequest.getVideoUrl(), imageOption));
+        }
 
         CompletableFuture<Void> chain = CompletableFuture.completedFuture(null);
+
 
         // Determine the number of tests to run based on the test configuration type
         int count = switch (testConfType) {
@@ -155,14 +175,19 @@ public class ThumbnailTestService {
             return;
         }
 
+        ThumbnailQueueItem thumbnailQueueItem;
         // Process each test asynchronously
-        for (int i = 0; i < count; i++) {
-            final int index = i;
-            final String base64 = (files64 != null && i < files64.size()) ? files64.get(i).getFileBase64() : null;
-            final String text = (texts != null && i < texts.size()) ? texts.get(i) : null;
+        while ((thumbnailQueueItem = thumbnailQueue.poll()) != null) {
+            final ThumbnailQueueItem currentItem = thumbnailQueueItem;
+            // Удаляем текущий элемент из очереди
+            thumbnailQueue.delete(currentItem);
 
-            chain = chain.thenComposeAsync(prev -> processSingleTest(thumbnailData, base64, text, index, delayMillis, testConfType));
+            currentItem.setActive(true);
+            chain = chain.thenComposeAsync(prev -> processSingleTest(
+                    thumbnailData, currentItem, delayMillis, testConfType
+            ));
         }
+
 
         // Notify when all tests are completed
         chain.thenRun(() -> messagingTemplate.convertAndSend("/topic/thumbnail/done", "Test for all images with videoUrl " + thumbnailRequest.getVideoUrl() + " completed"));
@@ -173,23 +198,22 @@ public class ThumbnailTestService {
      * This method updates the thumbnail or video title, fetches analytics data, and sends progress notifications.
      *
      * @param thumbnailData the thumbnail data to be tested
-     * @param base64        the base64-encoded image data
-     * @param text          the text to update the video title with
-     * @param index         the index of the current test
      * @param delayMillis   the delay between tests in milliseconds
      * @param testConfType  the type of test to run (e.g., THUMBNAIL, TEXT, THUMBNAILTEXT)
      * @return a CompletableFuture representing the asynchronous operation
      */
     private CompletableFuture<Void> processSingleTest(
             ThumbnailData thumbnailData,
-            String base64,
-            String text,
-            int index,
+            ThumbnailQueueItem thumbnailQueueItem,
             long delayMillis,
             TestConfType testConfType
     ) {
         return CompletableFuture.runAsync(() -> {
             try {
+                ImageOption imageOption = thumbnailQueueItem.getImageOption();
+                String base64 = imageOption.getFileBase64();
+                String text = imageOption.getText();
+
                 // Update the thumbnail if required
                 if (testConfType == TestConfType.THUMBNAIL || testConfType == TestConfType.THUMBNAILTEXT) {
                     File imageFile = imageParser.getFileFromBase64(base64);
@@ -205,19 +229,12 @@ public class ThumbnailTestService {
                 Thread.sleep(delayMillis);
 
                 // Fetch and save statistics
-                ThumbnailStats stats = youTubeAnalyticsService.getStats(thumbnailData.getUser(),thumbnailData, LocalDate.now());
+                ThumbnailStats stats = youTubeAnalyticsService.getStats(thumbnailData.getUser(), thumbnailData, LocalDate.now());
                 if (stats != null) {
-                    ImageOption imageOption = thumbnailData.getImageOptions().get(index);
-
-                    if (text != null) {
-                        imageOption.setText(text);
-                    }
-
                     imageOption.setThumbnailStats(stats);
                     stats.setImageOption(imageOption);
                     imageOption.setThumbnail(thumbnailData);
 
-                    // Save the updated thumbnail data
                     thumbnailService.save(thumbnailData);
 
                     // Send intermediate result via WebSocket
@@ -229,6 +246,8 @@ public class ThumbnailTestService {
             }
         });
     }
+
+
     public void updateThumbnailStats(StatsRequest statsRequest, int index) {
         ThumbnailData thumbnail = thumbnailRepository.findByVideoUrl(statsRequest.getVideoUrl());
 
