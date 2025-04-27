@@ -32,7 +32,7 @@ public class ThumbnailService {
 
         // Create a temporary file to save the image
         int number = new Random().nextInt(1000);
-        File tempFile = createTempFileFromImage(image, "thumbnail"+number+".png");
+        File tempFile = createTempFileFromImage(image, "thumbnail" + number + ".png");
 
         // Get the file size in MB
         Double size = getFileSizeMegaBytes(tempFile);

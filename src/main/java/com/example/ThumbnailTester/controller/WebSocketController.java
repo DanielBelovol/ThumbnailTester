@@ -6,6 +6,8 @@ import com.example.ThumbnailTester.dto.ThumbnailQueue;
 import com.example.ThumbnailTester.dto.ThumbnailQueueItem;
 import com.example.ThumbnailTester.services.ThumbnailQueueService;
 import com.example.ThumbnailTester.services.ThumbnailTestService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -16,6 +18,8 @@ import java.io.IOException;
 
 @Controller
 public class WebSocketController {
+    private static final Logger logger = LoggerFactory.getLogger(WebSocketController.class);
+
     private final SimpMessagingTemplate messagingTemplate;
     @Autowired
     private ThumbnailTestService thumbnailTestService;
@@ -48,9 +52,9 @@ public class WebSocketController {
             thumbnailTestService.runThumbnailTest(request);
 
         } catch (IOException e) {
-            // if an error occurs, send an error message
+            logger.error("Error processing the thumbnail test", e);
+
             messagingTemplate.convertAndSend("/topic/thumbnail/error", "ErrorProcessingRequest");
-            throw new RuntimeException("Error processing the thumbnail test", e);
         }
     }
 

@@ -10,7 +10,6 @@ import java.util.List;
 public interface ThumbnailRepository extends JpaRepository<ThumbnailData, Long> {
     ThumbnailData getThumbnailByUserId(long userId);
 
-
     List<ThumbnailData> findAllByUserId(long userID);
 
     ThumbnailData findByVideoUrl(String videoUrl);

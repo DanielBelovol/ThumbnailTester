@@ -1,6 +1,5 @@
 package com.example.ThumbnailTester.services;
 
-import com.example.ThumbnailTester.Request.StatsRequest;
 import com.example.ThumbnailTester.Request.ThumbnailRequest;
 import com.example.ThumbnailTester.Request.UserRequest;
 import com.example.ThumbnailTester.data.thumbnail.TestConfType;
@@ -138,7 +137,8 @@ public class ThumbnailTestService {
         int count = switch (testConfType) {
             case THUMBNAIL -> files64 != null ? files64.size() : 0;
             case TEXT -> texts != null ? texts.size() : 0;
-            case THUMBNAILTEXT -> (files64 != null && texts != null && files64.size() == texts.size()) ? files64.size() : 0;
+            case THUMBNAILTEXT ->
+                    (files64 != null && texts != null && files64.size() == texts.size()) ? files64.size() : 0;
         };
 
         if (count == 0) {

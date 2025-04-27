@@ -32,7 +32,7 @@ public class YouTubeAnalyticsService {
     @Autowired
     private Mapper mapper;
 
-    public ThumbnailStats getStats(UserData user,ThumbnailData thumbnailData , LocalDate startDate) throws IOException {
+    public ThumbnailStats getStats(UserData user, ThumbnailData thumbnailData, LocalDate startDate) throws IOException {
         // Получаем активную миниатюру
         ThumbnailData activeThumbnail = thumbnailData;
         if (activeThumbnail == null) {

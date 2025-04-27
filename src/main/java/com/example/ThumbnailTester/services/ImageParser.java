@@ -32,20 +32,20 @@ public class ImageParser {
         return images;
     }
 
-    public Image getImageFromBase64(String base64){
+    public Image getImageFromBase64(String base64) {
         try {
             return ImageIO.read(new ByteArrayInputStream(Base64.getDecoder().decode(base64)));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
+
     public File getFileFromBase64(String base64) {
         File tempDir = new File("temp");
         if (!tempDir.exists()) {
             tempDir.mkdirs();
         }
 
-        // Безопасное имя файла — хэш от base64
         String safeName = String.valueOf(base64.hashCode());
         File file = new File(tempDir, safeName + ".jpg");
 

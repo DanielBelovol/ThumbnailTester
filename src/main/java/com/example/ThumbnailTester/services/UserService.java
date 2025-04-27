@@ -23,7 +23,8 @@ public class UserService {
     public UserData getByGoogleId(String googleId) {
         return userRepository.findByGoogleId(googleId);
     }
-    public void save(UserData userData){
+
+    public void save(UserData userData) {
         userRepository.save(userData);
     }
 }

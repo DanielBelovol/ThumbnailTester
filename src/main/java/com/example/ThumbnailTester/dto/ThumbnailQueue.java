@@ -6,7 +6,8 @@ import java.util.Queue;
 
 @Data
 public class ThumbnailQueue {
-    Queue <ThumbnailQueueItem> queue = new java.util.concurrent.ConcurrentLinkedQueue<>();
+    Queue<ThumbnailQueueItem> queue = new java.util.concurrent.ConcurrentLinkedQueue<>();
+
     // Add a new item to the queue
     public void add(ThumbnailQueueItem item) {
         queue.add(item);
@@ -21,12 +22,14 @@ public class ThumbnailQueue {
     public ThumbnailQueueItem poll() {
         return queue.poll();
     }
+
     public boolean isEmpty() {
         return queue.isEmpty();
     }
+
     public ThumbnailQueueItem findByImageId(long id) {
         for (ThumbnailQueueItem item : queue) {
-            if(item.getImageOption().getId() == id) {
+            if (item.getImageOption().getId() == id) {
                 return item;
             }
         }

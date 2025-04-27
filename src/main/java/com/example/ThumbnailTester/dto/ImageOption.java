@@ -6,7 +6,6 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 
 @Entity
 @Table(name = "image_options")
@@ -34,4 +33,3 @@ public class ImageOption {
     @JoinColumn(name = "thumbnail_id")
     private ThumbnailData thumbnail;
 }
-

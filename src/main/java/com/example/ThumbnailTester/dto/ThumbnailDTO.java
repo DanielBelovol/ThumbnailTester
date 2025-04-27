@@ -1,9 +1,7 @@
 package com.example.ThumbnailTester.dto;
 
-import com.example.ThumbnailTester.data.thumbnail.ThumbnailStats;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 

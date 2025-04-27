@@ -25,10 +25,9 @@ public class ThumbnailData {
     @Column(nullable = false, name = "video_url")
     private String videoUrl;
 
-    @OneToOne(mappedBy = "thumbnailData") // если ссылается из конфигурации
+    @OneToOne(mappedBy = "thumbnailData")
     private ThumbnailTestConf testConf;
 
-    // Связь с пользователем, который создал миниатюру
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private UserData user;
