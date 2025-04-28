@@ -57,28 +57,66 @@ public class YouTubeService {
                 .setApplicationName(applicationName)
                 .build();
 
-        // Получить видео через YouTube API
+        // Get video details
         YouTube.Videos.List videoRequest = youtube.videos().list("snippet");
         videoRequest.setId(videoId);
         VideoListResponse response = videoRequest.execute();
 
         if (!response.getItems().isEmpty()) {
-            // Получаем видео
+            // get video
             Video video = response.getItems().get(0);
             VideoSnippet snippet = video.getSnippet();
 
-            // Изменяем название видео
+            // edit title
             snippet.setTitle(newTitle);
 
-            // Обновляем метаданные видео
+            // update metadata
             video.setSnippet(snippet);
 
-            // Выполняем запрос на обновление
+            // make request for update
             YouTube.Videos.Update videoUpdate = youtube.videos().update("snippet", video);
             videoUpdate.execute();
         } else {
             throw new IllegalArgumentException("Video with this id not found.");
         }
+    }
+    public String getVideoOwnerChannelId(UserData user, String videoId) throws IOException, GeneralSecurityException {
+        Credential credential = buildCredentialFromRefreshToken(user);
+        YouTube youtube = new YouTube.Builder(
+                credential.getTransport(),
+                credential.getJsonFactory(),
+                credential)
+                .setApplicationName(applicationName)
+                .build();
+
+        YouTube.Videos.List videoRequest = youtube.videos().list("snippet");
+        videoRequest.setId(videoId);
+        VideoListResponse response = videoRequest.execute();
+
+        if (response.getItems().isEmpty()) {
+            return null; // Просто вернуть null, если видео не найдено
+        }
+        return response.getItems().get(0).getSnippet().getChannelId();
+    }
+
+    public String getUserChannelId(UserData user) throws IOException, GeneralSecurityException {
+        Credential credential = buildCredentialFromRefreshToken(user);
+
+        YouTube youtube = new YouTube.Builder(
+                credential.getTransport(),
+                credential.getJsonFactory(),
+                credential)
+                .setApplicationName(applicationName)
+                .build();
+
+        YouTube.Channels.List channelRequest = youtube.channels().list("id");
+        channelRequest.setMine(true); // Получить канал текущего пользователя
+        var response = channelRequest.execute();
+
+        if (response.getItems().isEmpty()) {
+            return null; // Нет канала
+        }
+        return response.getItems().get(0).getId(); // Берём id первого канала
     }
 
     public Credential buildCredentialFromRefreshToken(UserData user) throws IOException, GeneralSecurityException {

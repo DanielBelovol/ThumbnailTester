@@ -33,7 +33,6 @@ public class YouTubeAnalyticsService {
     private Mapper mapper;
 
     public ThumbnailStats getStats(UserData user, ThumbnailData thumbnailData, LocalDate startDate) throws IOException {
-        // Получаем активную миниатюру
         ThumbnailData activeThumbnail = thumbnailData;
         if (activeThumbnail == null) {
             System.out.println("Нет активной миниатюры для пользователя");
@@ -42,14 +41,14 @@ public class YouTubeAnalyticsService {
 
         String videoId = extractVideoIdFromUrl(activeThumbnail.getVideoUrl());
 
-        // Выполняем запрос к YouTube Analytics API
+        // make request to YouTube Analytics API
         ResultTable analyticsResponse = youTubeAnalytics.reports()
                 .query("channel==MINE", startDate.toString(), "2025-12-31",
                         "views,comments,likes,subscribersGained,shares,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,impressions,impressionsClickThroughRate")
                 .setFilters("video==" + videoId)
                 .execute();
 
-        // Разбор результата
+        // check if the response is empty
         if (analyticsResponse.getRows() == null || analyticsResponse.getRows().isEmpty()) {
             System.out.println("No data for this video: " + videoId);
             return null;
@@ -80,7 +79,6 @@ public class YouTubeAnalyticsService {
     }
 
     private String extractVideoIdFromUrl(String url) {
-        // Простой способ вытащить ID из https://www.youtube.com/watch?v=VIDEO_ID
         if (url.contains("v=")) {
             return url.split("v=")[1].split("&")[0];
         }

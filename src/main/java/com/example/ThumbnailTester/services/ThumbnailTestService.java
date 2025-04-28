@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -68,50 +69,77 @@ public class ThumbnailTestService {
 
     @Async
     public void runThumbnailTest(ThumbnailRequest thumbnailRequest) throws IOException {
-        // Retrieve user data from the request
-        UserRequest userRequest = thumbnailRequest.getUserDTO();
-        UserData userData = userService.getByGoogleId(userRequest.getGoogleId());
+        try {
+            // 1. Retrieve user data
+            UserRequest userRequest = thumbnailRequest.getUserDTO();
+            UserData userData = userService.getByGoogleId(userRequest.getGoogleId());
 
-        // Map test configuration and thumbnail data
-        ThumbnailTestConf testConf = mapper.testConfRequestToDTO(thumbnailRequest.getTestConfRequest());
-        ThumbnailData thumbnailData = mapper.thumbnailRequestToData(thumbnailRequest);
+            // 2. Map test configuration and thumbnail data
+            ThumbnailTestConf testConf = mapper.testConfRequestToDTO(thumbnailRequest.getTestConfRequest());
+            ThumbnailData thumbnailData = mapper.thumbnailRequestToData(thumbnailRequest);
+            List<ImageOption> imageOptions = thumbnailRequest.getImageOptions();
 
-        List<ImageOption> imageOptions = thumbnailRequest.getImageOptions();
-
-        // Validate image options
-        if (imageOptions == null || imageOptions.isEmpty()) {
-            messagingTemplate.convertAndSend("/topic/thumbnail/error", "NoImagesProvided");
-            return;
-        }
-
-        for (ImageOption option : imageOptions) {
-            if (!thumbnailService.isValid(option.getFileBase64())) {
-                messagingTemplate.convertAndSend("/topic/thumbnail/error", "UnsupportedImage");
+            // 3. Validate image options
+            if (imageOptions == null || imageOptions.isEmpty()) {
+                messagingTemplate.convertAndSend("/topic/thumbnail/error", "NoImagesProvided");
                 return;
             }
-        }
 
-        // Register user if not already registered
-        if (!userService.isExistById(userData.getId())) {
-            userData = new UserData(userRequest.getGoogleId(), userRequest.getRefreshToken());
-        }
-
-        // Save thumbnail data
-        thumbnailService.save(thumbnailData);
-
-        // Start the test process
-        startTest(thumbnailRequest, testConf.getTestType(), thumbnailData);
-
-        // Schedule sending of final results after the test duration
-        long delayMillis = thumbnailRequest.getTestConfRequest().getTestingByTimeMinutes() * 60 * 1000L;
-        taskScheduler.schedule(() -> {
-            try {
-                messagingTemplate.convertAndSend("/topic/thumbnail/result", getTestResults(thumbnailData));
-            } catch (Exception e) {
-                messagingTemplate.convertAndSend("/topic/thumbnail/error", "ErrorSendingResults");
+            for (ImageOption option : imageOptions) {
+                if (!thumbnailService.isValid(option.getFileBase64())) {
+                    messagingTemplate.convertAndSend("/topic/thumbnail/error", "UnsupportedImage");
+                    return;
+                }
             }
-        }, new java.util.Date(System.currentTimeMillis() + delayMillis));
+
+            // 4. Check video ownership
+            String videoId = youTubeService.getVideoIdFromUrl(thumbnailRequest.getVideoUrl());
+            String videoOwnerChannelId = youTubeService.getVideoOwnerChannelId(userData, videoId);
+            String userChannelId = youTubeService.getUserChannelId(userData);
+
+            if (videoOwnerChannelId == null) {
+                messagingTemplate.convertAndSend("/topic/thumbnail/error", "VideoNotFound");
+                return;
+            }
+
+            if (userChannelId == null) {
+                messagingTemplate.convertAndSend("/topic/thumbnail/error", "UserChannelNotFound");
+                return;
+            }
+
+            if (!userChannelId.equals(videoOwnerChannelId)) {
+                messagingTemplate.convertAndSend("/topic/thumbnail/error", "UnauthorizedVideoAccess");
+                return;
+            }
+
+            // 5. Register user if not already registered
+            if (!userService.isExistById(userData.getId())) {
+                userData = new UserData(userRequest.getGoogleId(), userRequest.getRefreshToken());
+            }
+
+            // 6. Save thumbnail test data
+            thumbnailService.save(thumbnailData);
+
+            // 7. Start the test
+            startTest(thumbnailRequest, testConf.getTestType(), thumbnailData);
+
+            // 8. Schedule sending final test results
+            long delayMillis = thumbnailRequest.getTestConfRequest().getTestingByTimeMinutes() * 60 * 1000L;
+            taskScheduler.schedule(() -> {
+                try {
+                    messagingTemplate.convertAndSend("/topic/thumbnail/result", getTestResults(thumbnailData));
+                } catch (Exception e) {
+                    messagingTemplate.convertAndSend("/topic/thumbnail/error", "ErrorSendingResults");
+                }
+            }, new java.util.Date(System.currentTimeMillis() + delayMillis));
+
+        } catch (GeneralSecurityException e) {
+            messagingTemplate.convertAndSend("/topic/thumbnail/error", "GeneralSecurityException");
+        } catch (Exception e) {
+            messagingTemplate.convertAndSend("/topic/thumbnail/error", "InternalServerError");
+        }
     }
+
 
     private List<ImageOption> getTestResults(ThumbnailData thumbnailData) {
         return thumbnailData.getImageOptions();
