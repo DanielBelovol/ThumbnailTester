@@ -2,10 +2,7 @@ package com.example.ThumbnailTester.services;
 
 import com.example.ThumbnailTester.Request.ThumbnailRequest;
 import com.example.ThumbnailTester.Request.UserRequest;
-import com.example.ThumbnailTester.data.thumbnail.TestConfType;
-import com.example.ThumbnailTester.data.thumbnail.ThumbnailData;
-import com.example.ThumbnailTester.data.thumbnail.ThumbnailStats;
-import com.example.ThumbnailTester.data.thumbnail.ThumbnailTestConf;
+import com.example.ThumbnailTester.data.thumbnail.*;
 import com.example.ThumbnailTester.data.user.UserData;
 import com.example.ThumbnailTester.dto.ImageOption;
 import com.example.ThumbnailTester.dto.ThumbnailQueue;
@@ -19,11 +16,11 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
-import java.io.IOException;
-import java.security.GeneralSecurityException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+
+import static com.example.ThumbnailTester.data.thumbnail.CriterionOfWinner.*;
 
 /**
  * Service for managing thumbnail tests.
@@ -68,7 +65,7 @@ public class ThumbnailTestService {
     }
 
     @Async
-    public void runThumbnailTest(ThumbnailRequest thumbnailRequest) throws IOException {
+    public void runThumbnailTest(ThumbnailRequest thumbnailRequest) {
         try {
             // 1. Retrieve user data
             UserRequest userRequest = thumbnailRequest.getUserDTO();
@@ -120,33 +117,44 @@ public class ThumbnailTestService {
             // 6. Save thumbnail test data
             thumbnailService.save(thumbnailData);
 
-            // 7. Start the test
+            // 7. Getting the criterion of winner
+            CriterionOfWinner finalCriterionOfWinner = getCriterionOfWinner(thumbnailRequest);
+
+            // 8. Start the test
             startTest(thumbnailRequest, testConf.getTestType(), thumbnailData);
 
-            // 8. Schedule sending final test results
+            // 9. Schedule sending final test results
             long delayMillis = thumbnailRequest.getTestConfRequest().getTestingByTimeMinutes() * 60 * 1000L;
+
+
             taskScheduler.schedule(() -> {
                 try {
-                    messagingTemplate.convertAndSend("/topic/thumbnail/result", getTestResults(thumbnailData));
+                    messagingTemplate.convertAndSend("/topic/thumbnail/result", getTestResults(thumbnailData, finalCriterionOfWinner));
                 } catch (Exception e) {
                     messagingTemplate.convertAndSend("/topic/thumbnail/error", "ErrorSendingResults");
                 }
             }, new java.util.Date(System.currentTimeMillis() + delayMillis));
 
-        } catch (GeneralSecurityException e) {
-            messagingTemplate.convertAndSend("/topic/thumbnail/error", "GeneralSecurityException");
         } catch (Exception e) {
             messagingTemplate.convertAndSend("/topic/thumbnail/error", "InternalServerError");
         }
     }
 
-
-    private List<ImageOption> getTestResults(ThumbnailData thumbnailData) {
-        return thumbnailData.getImageOptions();
+    private CriterionOfWinner getCriterionOfWinner(ThumbnailRequest thumbnailRequest) {
+        CriterionOfWinner criterionOfWinner = NONE;
+        switch (thumbnailRequest.getTestConfRequest().getCriterionOfWinner()) {
+            case "VIEWS" -> criterionOfWinner = VIEWS;
+            case "AVD" -> criterionOfWinner = AVD;
+            case "CTR" -> criterionOfWinner = CTR;
+            case "WATCH_TIME" -> criterionOfWinner = CriterionOfWinner.WATCH_TIME;
+            case "CTR_ADV" -> criterionOfWinner = CriterionOfWinner.CTR_ADV;
+        }
+        return criterionOfWinner;
     }
 
+
     @Async
-    public void startTest(ThumbnailRequest thumbnailRequest, TestConfType testConfType, ThumbnailData thumbnailData) throws IOException {
+    public void startTest(ThumbnailRequest thumbnailRequest, TestConfType testConfType, ThumbnailData thumbnailData) {
         List<ImageOption> files64 = thumbnailRequest.getImageOptions();
         List<String> texts = thumbnailRequest.getTexts();
         long delayMillis = thumbnailRequest.getTestConfRequest().getTestingByTimeMinutes() * 60 * 1000L;
@@ -158,8 +166,6 @@ public class ThumbnailTestService {
         for (ImageOption imageOption : thumbnailData.getImageOptions()) {
             thumbnailQueue.add(new ThumbnailQueueItem(thumbnailRequest.getVideoUrl(), imageOption));
         }
-
-        CompletableFuture<Void> chain = CompletableFuture.completedFuture(null);
 
         // Determine the number of tests to run based on the test configuration type
         int count = switch (testConfType) {
@@ -174,22 +180,26 @@ public class ThumbnailTestService {
             return;
         }
 
+        List<CompletableFuture<Void>> futures = new java.util.ArrayList<>();
+
         ThumbnailQueueItem thumbnailQueueItem;
-        // Process each test asynchronously
         while ((thumbnailQueueItem = thumbnailQueue.poll()) != null) {
             final ThumbnailQueueItem currentItem = thumbnailQueueItem;
-
-            // Remove the current item from the queue
             thumbnailQueue.delete(currentItem);
-
             currentItem.setActive(true);
-            chain = chain.thenComposeAsync(prev -> processSingleTest(
-                    thumbnailData, currentItem, delayMillis, testConfType
-            ));
+            futures.add(processSingleTest(thumbnailData, currentItem, delayMillis, testConfType));
         }
 
-        // Notify when all tests are completed
-        chain.thenRun(() -> messagingTemplate.convertAndSend("/topic/thumbnail/done", "Test for all images with videoUrl " + thumbnailRequest.getVideoUrl() + " completed"));
+        // После всех тестов определяем победителя и отправляем статистику
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenRun(() -> {
+            try {
+                List<ImageOption> options = getTestResults(thumbnailData, getCriterionOfWinner(thumbnailRequest));
+                thumbnailService.save(thumbnailData); // Сохраняем обновлённые isWinner
+                messagingTemplate.convertAndSend("/topic/thumbnail/final", options);
+            } catch (Exception e) {
+                messagingTemplate.convertAndSend("/topic/thumbnail/error", "FinalResultError");
+            }
+        });
     }
 
     private CompletableFuture<Void> processSingleTest(
@@ -219,7 +229,7 @@ public class ThumbnailTestService {
                 Thread.sleep(delayMillis);
 
                 // Fetch and save statistics
-                ThumbnailStats stats = youTubeAnalyticsService.getStats(thumbnailData.getUser(), thumbnailData, LocalDate.now());
+                ThumbnailStats stats = youTubeAnalyticsService.getStats(thumbnailData.getUser(), LocalDate.now(), thumbnailQueueItem);
                 if (stats != null) {
                     imageOption.setThumbnailStats(stats);
                     stats.setImageOption(imageOption);
@@ -230,10 +240,45 @@ public class ThumbnailTestService {
                     // Send intermediate result via WebSocket
                     messagingTemplate.convertAndSend("/topic/thumbnail/progress", imageOption);
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
-                throw new RuntimeException("Error in processSingleTest: " + e.getMessage());
+            } catch (InterruptedException e) {
+                messagingTemplate.convertAndSend("/topic/thumbnail/error", "InternalServerError");
             }
         });
+    }
+
+    private List<ImageOption> getTestResults(ThumbnailData thumbnailData, CriterionOfWinner criterion) {
+        List<ImageOption> options = thumbnailData.getImageOptions();
+
+        if (criterion == CriterionOfWinner.NONE || options == null || options.isEmpty()) {
+            return options;
+        }
+
+        ImageOption winner = null;
+        double maxMetric = -1;
+
+        for (ImageOption option : options) {
+            ThumbnailStats stats = option.getThumbnailStats();
+            if (stats == null) continue;
+
+            double value = switch (criterion) {
+                case VIEWS -> stats.getViews();
+                case AVD -> stats.getAverageViewDuration();
+                case CTR -> stats.getCtr();
+                case WATCH_TIME -> stats.getTotalWatchTime();
+                case CTR_ADV -> stats.getCtr() * stats.getAverageViewDuration();
+                default -> -1;
+            };
+
+            if (value > maxMetric) {
+                maxMetric = value;
+                winner = option;
+            }
+        }
+
+        if (winner != null) {
+            winner.setWinner(true);
+        }
+
+        return options;
     }
 }

@@ -13,6 +13,7 @@ import com.google.api.services.youtube.model.Video;
 import com.google.api.services.youtube.model.VideoListResponse;
 import com.google.api.services.youtube.model.VideoSnippet;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -20,7 +21,6 @@ import java.io.IOException;
 import java.security.GeneralSecurityException;
 
 @Service
-
 public class YouTubeService {
     @Value("${youtube.client.id}")
     private String clientId;
@@ -30,109 +30,156 @@ public class YouTubeService {
 
     @Value("${application.name}")
     private String applicationName;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    public ThumbnailSetResponse uploadThumbnail(ThumbnailData thumbnailData, File thumbnailFile) throws IOException, GeneralSecurityException {
-        Credential credential = buildCredentialFromRefreshToken(thumbnailData.getUser());
-        YouTube youTube = new YouTube.Builder(
-                credential.getTransport(),
-                credential.getJsonFactory(),
-                credential)
-                .setApplicationName(applicationName)
-                .build();
-        FileContent mediaContent = new FileContent("image/jpeg", thumbnailFile);
-
-        YouTube.Thumbnails.Set thumbnailSet = youTube.thumbnails()
-                .set(getVideoIdFromUrl(thumbnailData.getVideoUrl()), mediaContent);
-
-        return thumbnailSet.execute();
+    public YouTubeService(SimpMessagingTemplate messagingTemplate) {
+        this.messagingTemplate = messagingTemplate;
     }
 
-    public void updateVideoTitle(UserData user, String videoId, String newTitle) throws IOException, GeneralSecurityException {
-        Credential credential = buildCredentialFromRefreshToken(user);
+    public void uploadThumbnail(ThumbnailData thumbnailData, File thumbnailFile) {
+        try {
+            Credential credential = buildCredentialFromRefreshToken(thumbnailData.getUser());
+            YouTube youTube = new YouTube.Builder(
+                    credential.getTransport(),
+                    credential.getJsonFactory(),
+                    credential)
+                    .setApplicationName(applicationName)
+                    .build();
 
-        YouTube youtube = new YouTube.Builder(
-                credential.getTransport(),
-                credential.getJsonFactory(),
-                credential)
-                .setApplicationName(applicationName)
-                .build();
+            // Prepare the thumbnail file for upload
+            FileContent mediaContent = new FileContent("image/jpeg", thumbnailFile);
 
-        // Get video details
-        YouTube.Videos.List videoRequest = youtube.videos().list("snippet");
-        videoRequest.setId(videoId);
-        VideoListResponse response = videoRequest.execute();
+            // Execute the thumbnail upload
+            YouTube.Thumbnails.Set thumbnailSet = youTube.thumbnails()
+                    .set(getVideoIdFromUrl(thumbnailData.getVideoUrl()), mediaContent);
 
-        if (!response.getItems().isEmpty()) {
-            // get video
-            Video video = response.getItems().get(0);
-            VideoSnippet snippet = video.getSnippet();
+            ThumbnailSetResponse response = thumbnailSet.execute();
 
-            // edit title
-            snippet.setTitle(newTitle);
-
-            // update metadata
-            video.setSnippet(snippet);
-
-            // make request for update
-            YouTube.Videos.Update videoUpdate = youtube.videos().update("snippet", video);
-            videoUpdate.execute();
-        } else {
-            throw new IllegalArgumentException("Video with this id not found.");
+            // Check if the response contains the expected data (successful upload)
+            if (response != null && response.getItems() != null && !response.getItems().isEmpty()) {
+                messagingTemplate.convertAndSend("/topic/thumbnail/success", "Thumbnail uploaded successfully.");
+            } else {
+                messagingTemplate.convertAndSend("/topic/thumbnail/error", "Thumbnail upload failed: No response items found.");
+            }
+        } catch (IOException e) {
+            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Failed to upload thumbnail: " + e.getMessage());
         }
     }
-    public String getVideoOwnerChannelId(UserData user, String videoId) throws IOException, GeneralSecurityException {
-        Credential credential = buildCredentialFromRefreshToken(user);
-        YouTube youtube = new YouTube.Builder(
-                credential.getTransport(),
-                credential.getJsonFactory(),
-                credential)
-                .setApplicationName(applicationName)
-                .build();
 
-        YouTube.Videos.List videoRequest = youtube.videos().list("snippet");
-        videoRequest.setId(videoId);
-        VideoListResponse response = videoRequest.execute();
 
-        if (response.getItems().isEmpty()) {
-            return null; // Просто вернуть null, если видео не найдено
+    public void updateVideoTitle(UserData user, String videoId, String newTitle) {
+        try {
+            Credential credential = buildCredentialFromRefreshToken(user);
+
+            YouTube youtube = new YouTube.Builder(
+                    credential.getTransport(),
+                    credential.getJsonFactory(),
+                    credential)
+                    .setApplicationName(applicationName)
+                    .build();
+
+            // Get video details
+            YouTube.Videos.List videoRequest = youtube.videos().list("snippet");
+            videoRequest.setId(videoId);
+            VideoListResponse response = videoRequest.execute();
+
+            if (!response.getItems().isEmpty()) {
+                // get video
+                Video video = response.getItems().get(0);
+                VideoSnippet snippet = video.getSnippet();
+
+                // edit title
+                snippet.setTitle(newTitle);
+
+                // update metadata
+                video.setSnippet(snippet);
+
+                // make request for update
+                YouTube.Videos.Update videoUpdate = youtube.videos().update("snippet", video);
+                videoUpdate.execute();
+            } else {
+                messagingTemplate.convertAndSend("/topic/thumbnail/error", "Video with id " + videoId + " not found.");
+            }
+        } catch (IOException e) {
+            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Error updating video title: " + e.getMessage());
         }
-        return response.getItems().get(0).getSnippet().getChannelId();
     }
 
-    public String getUserChannelId(UserData user) throws IOException, GeneralSecurityException {
-        Credential credential = buildCredentialFromRefreshToken(user);
+    public String getVideoOwnerChannelId(UserData user, String videoId) {
+        try {
+            Credential credential = buildCredentialFromRefreshToken(user);
+            YouTube youtube = new YouTube.Builder(
+                    credential.getTransport(),
+                    credential.getJsonFactory(),
+                    credential)
+                    .setApplicationName(applicationName)
+                    .build();
 
-        YouTube youtube = new YouTube.Builder(
-                credential.getTransport(),
-                credential.getJsonFactory(),
-                credential)
-                .setApplicationName(applicationName)
-                .build();
+            YouTube.Videos.List videoRequest = youtube.videos().list("snippet");
+            videoRequest.setId(videoId);
+            VideoListResponse response = videoRequest.execute();
 
-        YouTube.Channels.List channelRequest = youtube.channels().list("id");
-        channelRequest.setMine(true); // Получить канал текущего пользователя
-        var response = channelRequest.execute();
-
-        if (response.getItems().isEmpty()) {
-            return null; // Нет канала
+            if (response.getItems().isEmpty()) {
+                return null;
+            }
+            return response.getItems().get(0).getSnippet().getChannelId();
+        } catch (IOException e) {
+            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Error getting video owner channel ID: " + e.getMessage());
         }
-        return response.getItems().get(0).getId(); // Берём id первого канала
+        return null;
     }
 
-    public Credential buildCredentialFromRefreshToken(UserData user) throws IOException, GeneralSecurityException {
-        return new GoogleCredential.Builder()
-                .setTransport(GoogleNetHttpTransport.newTrustedTransport())
-                .setJsonFactory(JacksonFactory.getDefaultInstance())
-                .setClientSecrets(clientId, clientSecret)
-                .build()
-                .setRefreshToken(user.getRefreshToken());
+    public String getUserChannelId(UserData user) {
+        try {
+            Credential credential = buildCredentialFromRefreshToken(user);
+
+            YouTube youtube = new YouTube.Builder(
+                    credential.getTransport(),
+                    credential.getJsonFactory(),
+                    credential)
+                    .setApplicationName(applicationName)
+                    .build();
+
+            YouTube.Channels.List channelRequest = youtube.channels().list("id");
+            channelRequest.setMine(true);
+            var response = channelRequest.execute();
+
+            if (response.getItems().isEmpty()) {
+                return null;
+            }
+            return response.getItems().get(0).getId();
+        } catch (IOException e) {
+            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Error getting user channel ID: " + e.getMessage());
+        }
+        return null;
+    }
+
+    public Credential buildCredentialFromRefreshToken(UserData user) {
+        try {
+            Credential credential = new GoogleCredential.Builder()
+                    .setTransport(GoogleNetHttpTransport.newTrustedTransport())
+                    .setJsonFactory(JacksonFactory.getDefaultInstance())
+                    .setClientSecrets(clientId, clientSecret)
+                    .build()
+                    .setRefreshToken(user.getRefreshToken());
+            // Refresh the token to ensure it's valid
+            credential.refreshToken();
+
+            return credential;
+
+        } catch (IOException | GeneralSecurityException e) {
+            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Error building YouTube service: " + e.getMessage());
+        }
+        return null;
     }
 
     public String getVideoIdFromUrl(String videoUrl) {
         if (videoUrl.contains("v=")) {
             return videoUrl.split("v=")[1].split("&")[0];  // Avoid split issues with additional parameters
         } else {
-            throw new IllegalArgumentException("Invalid YouTube URL format");
+            // If URL format is invalid, send an error message using messagingTemplate
+            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Invalid YouTube URL format: " + videoUrl);
+            return null;  // Or you can return an empty string or another value to signify an error
         }
     }
 }

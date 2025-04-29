@@ -26,8 +26,7 @@ public class ThumbnailQueueService {
     }
 
     public ThumbnailQueue findItemByVideoUrl(String videoUrl) {
-        ThumbnailQueue queue = thumbnailQueues.get(videoUrl);
-        return queue;
+        return thumbnailQueues.get(videoUrl);
     }
 
     public void deleteFromQueue(String videoUrl, ThumbnailQueueItem item) {
