@@ -4,6 +4,7 @@ import com.example.ThumbnailTester.Request.ThumbnailRequest;
 import com.example.ThumbnailTester.dto.ImageOption;
 import com.example.ThumbnailTester.dto.ThumbnailQueue;
 import com.example.ThumbnailTester.dto.ThumbnailQueueItem;
+import com.example.ThumbnailTester.mapper.Mapper;
 import com.example.ThumbnailTester.services.ThumbnailQueueService;
 import com.example.ThumbnailTester.services.ThumbnailTestService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,8 @@ public class WebSocketController {
     private ThumbnailTestService thumbnailTestService;
     @Autowired
     private ThumbnailQueueService thumbnailQueueService;
+    @Autowired
+    private Mapper mapper;
 
     public WebSocketController(SimpMessagingTemplate messagingTemplate) {
         this.messagingTemplate = messagingTemplate;
@@ -27,14 +30,14 @@ public class WebSocketController {
     @MessageMapping("/thumbnail/test")
     public void handleTestMessage(@Payload ThumbnailRequest request) {
         // verify if there are images in the request
-        if (request.getImageOptions() == null || request.getImageOptions().isEmpty()) {
+        if (request.getImages() == null || request.getImages().isEmpty()) {
             // sending error message if no images are provided
             messagingTemplate.convertAndSend("/topic/thumbnail/error", "NoImagesProvided");
             return;
         }
 
         // iterate through the image options
-        for (ImageOption imageOption : request.getImageOptions()) {
+        for (ImageOption imageOption : mapper.listBase64ToImageOptionList(request.getImages(),null)) {
             // create a ThumbnailQueueItem
             ThumbnailQueueItem queueItem = new ThumbnailQueueItem(request.getVideoUrl(), imageOption);
             // add the item to the queue

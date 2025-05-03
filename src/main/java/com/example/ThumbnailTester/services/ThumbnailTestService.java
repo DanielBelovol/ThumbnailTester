@@ -74,7 +74,7 @@ public class ThumbnailTestService {
             // 2. Map test configuration and thumbnail data
             ThumbnailTestConf testConf = mapper.testConfRequestToDTO(thumbnailRequest.getTestConfRequest());
             ThumbnailData thumbnailData = mapper.thumbnailRequestToData(thumbnailRequest);
-            List<ImageOption> imageOptions = thumbnailRequest.getImageOptions();
+            List<ImageOption> imageOptions = mapper.listBase64ToImageOptionList(thumbnailRequest.getImages(), null);
 
             // 3. Validate image options
             if (imageOptions == null || imageOptions.isEmpty()) {
@@ -155,7 +155,7 @@ public class ThumbnailTestService {
 
     @Async
     public void startTest(ThumbnailRequest thumbnailRequest, TestConfType testConfType, ThumbnailData thumbnailData) {
-        List<ImageOption> files64 = thumbnailRequest.getImageOptions();
+        List<ImageOption> files64 = mapper.listBase64ToImageOptionList(thumbnailRequest.getImages(), thumbnailData);
         List<String> texts = thumbnailRequest.getTexts();
         long delayMillis = thumbnailRequest.getTestConfRequest().getTestingByTimeMinutes() * 60 * 1000L;
 
