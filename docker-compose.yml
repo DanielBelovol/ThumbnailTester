@@ -12,9 +12,11 @@ services:
     env_file:
       - .env
     restart: always
+    volumes:
+      - ./src/main/resources:/app/resources
 
   thumbnail-test-db:
-    image: postgres
+    image: postgres:16
     container_name: thumbnail-test-db
     environment:
       POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME}

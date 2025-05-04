@@ -9,6 +9,8 @@ import com.example.ThumbnailTester.dto.ThumbnailQueue;
 import com.example.ThumbnailTester.dto.ThumbnailQueueItem;
 import com.example.ThumbnailTester.mapper.Mapper;
 import com.example.ThumbnailTester.repositories.ThumbnailRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.TaskScheduler;
@@ -49,6 +51,8 @@ public class ThumbnailTestService {
     private Mapper mapper;
     @Autowired
     private ThumbnailRepository thumbnailRepository;
+    private static final Logger log = LoggerFactory.getLogger(ThumbnailTestService.class);
+
 
     @Autowired
     private ThumbnailQueueService thumbnailQueueService;
@@ -67,14 +71,28 @@ public class ThumbnailTestService {
     @Async
     public void runThumbnailTest(ThumbnailRequest thumbnailRequest) {
         try {
-            // 1. Retrieve user data
+            // 1. Receive user data
             UserRequest userRequest = thumbnailRequest.getUserDTO();
             UserData userData = userService.getByGoogleId(userRequest.getGoogleId());
 
+            if (userData == null) {
+                // Создаем нового пользователя, если он не найден
+                userData = new UserData(userRequest.getGoogleId(), userRequest.getRefreshToken());
+                userService.save(userData); // Сохраняем нового пользователя
+            }
+
+            log.info("User: " + userData.toString());
+
             // 2. Map test configuration and thumbnail data
+            log.info("mapping");
             ThumbnailTestConf testConf = mapper.testConfRequestToDTO(thumbnailRequest.getTestConfRequest());
             ThumbnailData thumbnailData = mapper.thumbnailRequestToData(thumbnailRequest);
-            List<ImageOption> imageOptions = mapper.listBase64ToImageOptionList(thumbnailRequest.getImages(), null);
+
+            List<ImageOption> imageOptions = mapper.listBase64ToImageOptionList(
+                    thumbnailRequest.getImages(),
+                    thumbnailData
+            );
+            thumbnailData.setImageOptions(imageOptions); // Устанавливаем связи
 
             // 3. Validate image options
             if (imageOptions == null || imageOptions.isEmpty()) {
@@ -83,16 +101,23 @@ public class ThumbnailTestService {
             }
 
             for (ImageOption option : imageOptions) {
+                log.info("validation started");
                 if (!thumbnailService.isValid(option.getFileBase64())) {
                     messagingTemplate.convertAndSend("/topic/thumbnail/error", "UnsupportedImage");
                     return;
                 }
+                log.info("validation1 completed");
             }
+            log.info("validation completed");
 
             // 4. Check video ownership
+            log.info("checking videoOwner");
             String videoId = youTubeService.getVideoIdFromUrl(thumbnailRequest.getVideoUrl());
+            log.info("videoId" + videoId);
             String videoOwnerChannelId = youTubeService.getVideoOwnerChannelId(userData, videoId);
+            log.info("videoOwnerChannelId" + videoOwnerChannelId);
             String userChannelId = youTubeService.getUserChannelId(userData);
+            log.info("userChannelId" + userChannelId);
 
             if (videoOwnerChannelId == null) {
                 messagingTemplate.convertAndSend("/topic/thumbnail/error", "VideoNotFound");
@@ -110,22 +135,31 @@ public class ThumbnailTestService {
             }
 
             // 5. Register user if not already registered
+            log.info("checking thumbnail");
             if (!userService.isExistById(userData.getId())) {
+                log.info("register new user");
                 userData = new UserData(userRequest.getGoogleId(), userRequest.getRefreshToken());
             }
 
             // 6. Save thumbnail test data
-            thumbnailService.save(thumbnailData);
+            log.info("saving thumbnaildata");
+            testConf.setThumbnailData(thumbnailData);
+            thumbnailData.setTestConf(testConf); // Устанавливаем связь с двух сторон
+            log.info(testConf.toString());
+            thumbnailService.save(thumbnailData); // Сохраняем с уже установленными связями
+
 
             // 7. Getting the criterion of winner
+            log.info("Critter of winner");
             CriterionOfWinner finalCriterionOfWinner = getCriterionOfWinner(thumbnailRequest);
+            log.info("finalCriterionOfWinner" + finalCriterionOfWinner);
 
             // 8. Start the test
+            log.info("startTest");
             startTest(thumbnailRequest, testConf.getTestType(), thumbnailData);
 
             // 9. Schedule sending final test results
             long delayMillis = thumbnailRequest.getTestConfRequest().getTestingByTimeMinutes() * 60 * 1000L;
-
 
             taskScheduler.schedule(() -> {
                 try {

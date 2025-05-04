@@ -33,7 +33,21 @@ public class ThumbnailTestConf {
     @Column(name = "criterion_of_winner", nullable = false)
     private CriterionOfWinner criterionOfWinner;
 
-    @OneToOne
+    @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "thumbnail_id")
     private ThumbnailData thumbnailData;
+
+
+    @Override
+    public String toString() {
+        return "ThumbnailTestConf{" +
+                "id=" + id +
+                ", testType=" + testType +
+                ", testingType=" + testingType +
+                ", testingByTimeMinutes=" + testingByTimeMinutes +
+                ", testingByMetrics=" + testingByMetrics +
+                ", criterionOfWinner=" + criterionOfWinner +
+                ", thumbnailData.id=" + (thumbnailData != null ? thumbnailData.getId() : "null") +
+                '}';
+    }
 }

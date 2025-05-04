@@ -35,7 +35,7 @@ public class ThumbnailService {
     public boolean isValid(String fileBase64) {
 
         // Decode the base64 string to get the Image
-        Image image = imageParser.getImageFromBase64(fileBase64);
+        BufferedImage image = imageParser.getImageFromBase64(fileBase64);
         if (image == null) {
             messagingTemplate.convertAndSend("/topic/thumbnail/error", "Invalid base64 image data.");
             return false;
@@ -64,7 +64,7 @@ public class ThumbnailService {
         // Optionally delete the temporary file after validation
         tempFile.delete();
 
-        return valid;
+        return true;
     }
 
     private String generateTempFileName(String prefix, String extension) {

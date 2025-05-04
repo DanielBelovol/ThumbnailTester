@@ -38,4 +38,23 @@ public class ThumbnailData {
         this.testConf = testConf;
         this.user = user;
     }
+    public void setImageOptions(List<ImageOption> imageOptions) {
+        this.imageOptions = imageOptions;
+        if (imageOptions != null) {
+            for (ImageOption option : imageOptions) {
+                option.setThumbnail(this);
+            }
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "ThumbnailData{" +
+                "id=" + id +
+                ", imageOptions.size=" + (imageOptions != null ? imageOptions.size() : 0) + // Показываем размер коллекции
+                ", videoUrl='" + videoUrl + '\'' +
+                ", testConf=" + testConf.toString() +
+                ", user=" + user +
+                '}';
+    }
 }

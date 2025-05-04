@@ -7,6 +7,8 @@ import com.example.ThumbnailTester.dto.ThumbnailQueueItem;
 import com.example.ThumbnailTester.mapper.Mapper;
 import com.example.ThumbnailTester.services.ThumbnailQueueService;
 import com.example.ThumbnailTester.services.ThumbnailTestService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Controller;
 @Controller
 public class WebSocketController {
     private final SimpMessagingTemplate messagingTemplate;
+    private static final Logger log = LoggerFactory.getLogger(ThumbnailTestService.class);
     @Autowired
     private ThumbnailTestService thumbnailTestService;
     @Autowired
@@ -30,6 +33,7 @@ public class WebSocketController {
     @MessageMapping("/thumbnail/test")
     public void handleTestMessage(@Payload ThumbnailRequest request) {
         // verify if there are images in the request
+        log.info("Received thumbnail request: " + request.getVideoUrl());
         if (request.getImages() == null || request.getImages().isEmpty()) {
             // sending error message if no images are provided
             messagingTemplate.convertAndSend("/topic/thumbnail/error", "NoImagesProvided");

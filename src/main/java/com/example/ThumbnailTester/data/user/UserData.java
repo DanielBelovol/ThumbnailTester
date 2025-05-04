@@ -31,4 +31,14 @@ public class UserData {
         this.refreshToken = refreshToken;
         this.createdAt = LocalDateTime.now();
     }
+
+    @Override
+    public String toString() {
+        return "UserData{" +
+                "id=" + id +
+                ", googleId='" + googleId + '\'' +
+                ", refreshToken='" + refreshToken + '\'' +
+                ", createdAt=" + createdAt +
+                '}';
+    }
 }

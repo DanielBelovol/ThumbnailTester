@@ -7,6 +7,8 @@ import com.example.ThumbnailTester.data.user.UserData;
 import com.example.ThumbnailTester.dto.ImageOption;
 import com.example.ThumbnailTester.dto.ThumbnailQueueItem;
 import com.example.ThumbnailTester.services.UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -17,20 +19,43 @@ import java.util.List;
 public class Mapper {
     @Autowired
     private UserService userService;
+    private static final Logger log = LoggerFactory.getLogger(Mapper.class);
 
     public ThumbnailTestConf testConfRequestToDTO(ThumbnailTestConfRequest request) {
+        log.info("Entering testConfRequestToDTO method.");
+        log.info("TestType: " + request.getTestType());
+        log.info("TestingType: " + request.getTestingType());
+        log.info("CriterionOfWinner: " + request.getCriterionOfWinner());
+
         ThumbnailTestConf testConf = new ThumbnailTestConf();
 
-        testConf.setTestType(TestConfType.valueOf(request.getTestType()));
-        testConf.setTestingType(TestingType.valueOf(request.getTestingType()));
+        try {
+            testConf.setTestType(TestConfType.valueOf(request.getTestType()));
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid TestConfType: " + request.getTestType(), e);// Или можно вернуть null или задать значение по умолчанию
+        }
+
+        try {
+            testConf.setTestingType(TestingType.valueOf(request.getTestingType()));
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid TestingType: " + request.getTestingType(), e);
+        }
+
         testConf.setTestingByTimeMinutes(request.getTestingByTimeMinutes());
         testConf.setTestingByMetrics(request.getTestingByMetrics());
-        testConf.setCriterionOfWinner(CriterionOfWinner.valueOf(request.getCriterionOfWinner()));
+
+        try {
+            testConf.setCriterionOfWinner(CriterionOfWinner.valueOf(request.getCriterionOfWinner()));
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid CriterionOfWinner: " + request.getCriterionOfWinner(), e);
+            throw e;
+        }
 
         return testConf;
     }
 
     public ThumbnailData thumbnailRequestToData(ThumbnailRequest thumbnailRequest) {
+        log.info("Entering thumbnailRequestToData method.");
         UserData userData = userService.getByGoogleId(thumbnailRequest.getUserDTO().getGoogleId());
 
         ThumbnailData thumbnailData = new ThumbnailData();
@@ -70,10 +95,19 @@ public class Mapper {
 
     public List<ImageOption> listBase64ToImageOptionList(List<String> fileBase64List, ThumbnailData thumbnailData) {
         List<ImageOption> imageOptions = new ArrayList<>();
+
+        if (thumbnailData == null) {
+            log.error("ThumbnailData is null when attempting to create image options");
+        } else {
+            log.info("ThumbnailData is not null, proceeding with image option creation");
+        }
+
+        log.info("Starting foreach method.");
         for (String base64 : fileBase64List) {
             ImageOption imageOption = imageToImageOption(base64, thumbnailData);
             imageOptions.add(imageOption);
         }
+        log.info("ended foreach method.");
         return imageOptions;
     }
 
