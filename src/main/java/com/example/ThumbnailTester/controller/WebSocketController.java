@@ -54,7 +54,7 @@ public class WebSocketController {
         }
 
         // start the thumbnail test
-        thumbnailTestService.runThumbnailTest(request);
+        thumbnailTestService.runThumbnailTest(request, thumbnailData);
 
     }
 

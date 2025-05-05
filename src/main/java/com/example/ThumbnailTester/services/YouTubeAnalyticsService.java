@@ -1,6 +1,5 @@
 package com.example.ThumbnailTester.services;
 
-import com.example.ThumbnailTester.data.thumbnail.ThumbnailData;
 import com.example.ThumbnailTester.data.thumbnail.ThumbnailStats;
 import com.example.ThumbnailTester.data.user.UserData;
 import com.example.ThumbnailTester.dto.ThumbnailQueueItem;
@@ -31,15 +30,6 @@ public class YouTubeAnalyticsService {
 
     @Value("${application.name}")
     private String applicationName;
-
-    @Autowired
-    private ThumbnailStatsService thumbnailStatsService;
-
-    @Autowired
-    private UserService userService;
-
-    @Autowired
-    private ThumbnailService thumbnailService;
 
     @Autowired
     private Mapper mapper;
@@ -93,7 +83,7 @@ public class YouTubeAnalyticsService {
             stats.setAdvCtr(daysBetween > 0 ? (double) stats.getTotalWatchTime() / daysBetween : 0.0);
 
             return stats;
-        }catch (IOException e){
+        } catch (IOException e) {
             messagingTemplate.convertAndSend("/topic/thumbnail/error", "Error updating video title: " + e.getMessage());
         }
         return null;

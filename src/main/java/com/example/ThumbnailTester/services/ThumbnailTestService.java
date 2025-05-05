@@ -1,13 +1,11 @@
 package com.example.ThumbnailTester.services;
 
 import com.example.ThumbnailTester.Request.ThumbnailRequest;
-import com.example.ThumbnailTester.Request.UserRequest;
 import com.example.ThumbnailTester.data.thumbnail.*;
 import com.example.ThumbnailTester.data.user.UserData;
 import com.example.ThumbnailTester.dto.ImageOption;
 import com.example.ThumbnailTester.dto.ThumbnailQueue;
 import com.example.ThumbnailTester.dto.ThumbnailQueueItem;
-import com.example.ThumbnailTester.mapper.Mapper;
 import com.example.ThumbnailTester.repositories.ThumbnailRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,11 +16,11 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-
-import static com.example.ThumbnailTester.data.thumbnail.CriterionOfWinner.*;
 
 /**
  * Service for managing thumbnail tests.
@@ -40,15 +38,13 @@ public class ThumbnailTestService {
     @Autowired
     private ThumbnailService thumbnailService;
     @Autowired
-    private UserService userService;
+    SupaBaseImageService supaBaseImageService;
     @Autowired
     private YouTubeService youTubeService;
     @Autowired
     private YouTubeAnalyticsService youTubeAnalyticsService;
     @Autowired
     private ImageParser imageParser;
-    @Autowired
-    private Mapper mapper;
     @Autowired
     private ThumbnailRepository thumbnailRepository;
     private static final Logger log = LoggerFactory.getLogger(ThumbnailTestService.class);
@@ -69,30 +65,17 @@ public class ThumbnailTestService {
     }
 
     @Async
-    public void runThumbnailTest(ThumbnailRequest thumbnailRequest) {
+    public void runThumbnailTest(ThumbnailRequest thumbnailRequest, ThumbnailData thumbnailData) {
         try {
             // 1. Receive user data
-            UserRequest userRequest = thumbnailRequest.getUserDTO();
-            UserData userData = userService.getByGoogleId(userRequest.getGoogleId());
-
-            if (userData == null) {
-                // Создаем нового пользователя, если он не найден
-                userData = new UserData(userRequest.getGoogleId(), userRequest.getRefreshToken());
-                userService.save(userData); // Сохраняем нового пользователя
-            }
-
+            UserData userData = thumbnailData.getUser();
             log.info("User: " + userData.toString());
 
             // 2. Map test configuration and thumbnail data
             log.info("mapping");
-            ThumbnailTestConf testConf = mapper.testConfRequestToDTO(thumbnailRequest.getTestConfRequest());
-            ThumbnailData thumbnailData = mapper.thumbnailRequestToData(thumbnailRequest);
+            ThumbnailTestConf testConf = thumbnailData.getTestConf();
 
-            List<ImageOption> imageOptions = mapper.listBase64ToImageOptionList(
-                    thumbnailRequest.getImages(),
-                    thumbnailData
-            );
-            thumbnailData.setImageOptions(imageOptions); // Устанавливаем связи
+            List<ImageOption> imageOptions = thumbnailData.getImageOptions();
 
             // 3. Validate image options
             if (imageOptions == null || imageOptions.isEmpty()) {
@@ -102,7 +85,7 @@ public class ThumbnailTestService {
 
             for (ImageOption option : imageOptions) {
                 log.info("validation started");
-                if (!thumbnailService.isValid(option.getFileUrl())) {
+                if (!thumbnailService.isValid(supaBaseImageService.getFileFromPath(new URL(option.getFileUrl())))) {
                     messagingTemplate.convertAndSend("/topic/thumbnail/error", "UnsupportedImage");
                     return;
                 }
@@ -112,7 +95,7 @@ public class ThumbnailTestService {
 
             // 4. Check video ownership
             log.info("checking videoOwner");
-            String videoId = youTubeService.getVideoIdFromUrl(thumbnailRequest.getVideoUrl());
+            String videoId = youTubeService.getVideoIdFromUrl(thumbnailData.getVideoUrl());
             log.info("videoId" + videoId);
             String videoOwnerChannelId = youTubeService.getVideoOwnerChannelId(userData, videoId);
             log.info("videoOwnerChannelId" + videoOwnerChannelId);
@@ -134,36 +117,20 @@ public class ThumbnailTestService {
                 return;
             }
 
-            // 5. Register user if not already registered
-            log.info("checking thumbnail");
-            if (!userService.isExistById(userData.getId())) {
-                log.info("register new user");
-                userData = new UserData(userRequest.getGoogleId(), userRequest.getRefreshToken());
-            }
-
-            // 6. Save thumbnail test data
+            // 5. Save thumbnail test data
             log.info("saving thumbnaildata");
-            testConf.setThumbnailData(thumbnailData);
-            thumbnailData.setTestConf(testConf); // Устанавливаем связь с двух сторон
-            log.info(testConf.toString());
-            thumbnailService.save(thumbnailData); // Сохраняем с уже установленными связями
+            thumbnailService.save(thumbnailData);
 
-
-            // 7. Getting the criterion of winner
-            log.info("Critter of winner");
-            CriterionOfWinner finalCriterionOfWinner = getCriterionOfWinner(thumbnailRequest);
-            log.info("finalCriterionOfWinner" + finalCriterionOfWinner);
-
-            // 8. Start the test
+            // 6. Start the test
             log.info("startTest");
             startTest(thumbnailRequest, testConf.getTestType(), thumbnailData);
 
-            // 9. Schedule sending final test results
+            // 7. Schedule sending final test results
             long delayMillis = thumbnailRequest.getTestConfRequest().getTestingByTimeMinutes() * 60 * 1000L;
 
             taskScheduler.schedule(() -> {
                 try {
-                    messagingTemplate.convertAndSend("/topic/thumbnail/result", getTestResults(thumbnailData, finalCriterionOfWinner));
+                    messagingTemplate.convertAndSend("/topic/thumbnail/result", getTestResults(thumbnailData, thumbnailData.getTestConf().getCriterionOfWinner()));
                 } catch (Exception e) {
                     messagingTemplate.convertAndSend("/topic/thumbnail/error", "ErrorSendingResults");
                 }
@@ -173,26 +140,13 @@ public class ThumbnailTestService {
             log.error("Thumbnail test failed", e); // добавь это
             messagingTemplate.convertAndSend("/topic/thumbnail/error", "InternalServerError");
         }
-
-    }
-
-    private CriterionOfWinner getCriterionOfWinner(ThumbnailRequest thumbnailRequest) {
-        CriterionOfWinner criterionOfWinner = NONE;
-        switch (thumbnailRequest.getTestConfRequest().getCriterionOfWinner()) {
-            case "VIEWS" -> criterionOfWinner = VIEWS;
-            case "AVD" -> criterionOfWinner = AVD;
-            case "CTR" -> criterionOfWinner = CTR;
-            case "WATCH_TIME" -> criterionOfWinner = CriterionOfWinner.WATCH_TIME;
-            case "CTR_ADV" -> criterionOfWinner = CriterionOfWinner.CTR_ADV;
-        }
-        return criterionOfWinner;
     }
 
 
     @Async
     public void startTest(ThumbnailRequest thumbnailRequest, TestConfType testConfType, ThumbnailData thumbnailData) {
         log.info("startTest");
-        List<ImageOption> files64 = mapper.listBase64ToImageOptionList(thumbnailRequest.getImages(), thumbnailData);
+        List<ImageOption> imageOptions = thumbnailData.getImageOptions();
         List<String> texts = thumbnailRequest.getTexts();
         long delayMillis = thumbnailRequest.getTestConfRequest().getTestingByTimeMinutes() * 60 * 1000L;
         log.info("delayMillis" + delayMillis);
@@ -208,10 +162,10 @@ public class ThumbnailTestService {
 
         // Determine the number of tests to run based on the test configuration type
         int count = switch (testConfType) {
-            case THUMBNAIL -> files64 != null ? files64.size() : 0;
+            case THUMBNAIL -> imageOptions != null ? imageOptions.size() : 0;
             case TEXT -> texts != null ? texts.size() : 0;
             case THUMBNAILTEXT ->
-                    (files64 != null && texts != null && files64.size() == texts.size()) ? files64.size() : 0;
+                    (imageOptions != null && texts != null && imageOptions.size() == texts.size()) ? imageOptions.size() : 0;
         };
         log.info("count" + count);
 
@@ -236,7 +190,7 @@ public class ThumbnailTestService {
         // После всех тестов определяем победителя и отправляем статистику
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenRun(() -> {
             try {
-                List<ImageOption> options = getTestResults(thumbnailData, getCriterionOfWinner(thumbnailRequest));
+                List<ImageOption> options = getTestResults(thumbnailData, thumbnailData.getTestConf().getCriterionOfWinner());
                 thumbnailService.save(thumbnailData); // Сохраняем обновлённые isWinner
                 messagingTemplate.convertAndSend("/topic/thumbnail/final", options);
             } catch (Exception e) {
@@ -255,17 +209,19 @@ public class ThumbnailTestService {
             log.info("processSingleTest");
             try {
                 ImageOption imageOption = thumbnailQueueItem.getImageOption();
-                String base64 = imageOption.getFileUrl();
                 String text = imageOption.getText();
                 log.info("inf from req");
 
                 // Update the thumbnail if required
                 if (testConfType == TestConfType.THUMBNAIL || testConfType == TestConfType.THUMBNAILTEXT) {
                     log.info("upload thumbnail started");
-                    File imageFile = imageParser.getFileFromBase64(base64);
+                    File imageFile = supaBaseImageService.getFileFromPath(new URL(imageOption.getFileUrl()));
 
                     log.info("file received");
                     youTubeService.uploadThumbnail(thumbnailData, imageFile);
+                    Thread.sleep(10000);
+                    supaBaseImageService.deleteFileWithPath(imageFile);
+                    log.info("File has been deleted");
                     log.info("upload thumbnail");
                 }
 
@@ -297,8 +253,8 @@ public class ThumbnailTestService {
                     // Send intermediate result via WebSocket
                     messagingTemplate.convertAndSend("/topic/thumbnail/progress", imageOption);
                 }
-            } catch (InterruptedException e) {
-                messagingTemplate.convertAndSend("/topic/thumbnail/error", "InternalServerError");
+            } catch (InterruptedException | MalformedURLException e) {
+                messagingTemplate.convertAndSend("/topic/thumbnail/error", "InternalServerError"+e.getMessage());
             }
         });
     }

@@ -42,4 +42,14 @@ public class SupaBaseImageService {
         String path = url.getPath();
         return Paths.get(path).getFileName().toString();
     }
+    public void deleteFileWithPath(File file){
+        log.info("trying to delete file: " + file.getAbsolutePath());
+        try{
+        file.delete();
+        }catch (Exception e){
+            log.error(e.getMessage());
+            return;
+        }
+        log.info("deleted file: " + file.getAbsolutePath());
+    }
 }

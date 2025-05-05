@@ -24,43 +24,7 @@ public class ImageParser {
         this.messagingTemplate = messagingTemplate;
     }
 
-    public BufferedImage getImageFromBase64(String base64) {
-        // Если строка Base64 начинается с data:image, то убираем префикс
-        if (base64.startsWith("data:image")) {
-            base64 = base64.split(",")[1]; // Убираем префикс 'data:image/...;base64,'
-        }
 
-        // Логируем длину строки Base64 и её начало
-        log.info("Base64 string length: " + base64.length());
-        log.info("Base64 string preview (first 50 characters): " + base64.substring(0, Math.min(base64.length(), 50)));
-
-        // Проверка, может ли приложение читать файл по данному пути
-        String imagePath = "/app/resources/image1.jpeg";
-        File imageFile = new File(imagePath);
-        if (!imageFile.exists()) {
-            log.error("File does not exist at path: " + imagePath);
-            messagingTemplate.convertAndSend("/topic/thumbnail/error", "File not found at specified path");
-            return null;
-        }
-
-        if (!imageFile.canRead()) {
-            log.error("File is not readable: " + imagePath);
-            messagingTemplate.convertAndSend("/topic/thumbnail/error", "File is not readable");
-            return null;
-        }
-
-        try {
-            BufferedImage image = ImageIO.read(imageFile); // Загружаем изображение как BufferedImage
-            log.info("Image successfully loaded from file: " + imageFile.getAbsolutePath());
-            return image; // Возвращаем загруженное изображение
-        } catch (IOException e) {
-            // Логируем ошибку и отправляем сообщение о проблеме
-            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Failed to load image from file");
-            log.error("Error loading image from file: " + e.getMessage());
-        }
-
-        return null;
-    }
 
     // Метод для проверки корректности Base64 строки
     private boolean isValidBase64(String base64) {

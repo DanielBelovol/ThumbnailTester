@@ -50,13 +50,19 @@ public class Mapper {
             log.error("Invalid CriterionOfWinner: " + request.getCriterionOfWinner(), e);
             throw e;
         }
-
+        log.info("Exiting testConfRequestToDTO method.");
         return testConf;
     }
 
     public ThumbnailData thumbnailRequestToData(ThumbnailRequest thumbnailRequest) {
         log.info("Entering thumbnailRequestToData method.");
         UserData userData = userService.getByGoogleId(thumbnailRequest.getUserDTO().getGoogleId());
+        if(userData==null){
+            userData = new UserData(
+                    thumbnailRequest.getUserDTO().getGoogleId(),
+                    thumbnailRequest.getUserDTO().getRefreshToken()
+            );
+        }
 
         ThumbnailData thumbnailData = new ThumbnailData();
         thumbnailData.setVideoUrl(thumbnailRequest.getVideoUrl());

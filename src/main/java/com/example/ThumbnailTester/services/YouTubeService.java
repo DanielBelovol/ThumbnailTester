@@ -13,6 +13,7 @@ import com.google.api.services.youtube.model.Video;
 import com.google.api.services.youtube.model.VideoListResponse;
 import com.google.api.services.youtube.model.VideoSnippet;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,8 @@ public class YouTubeService {
 
     @Value("${application.name}")
     private String applicationName;
+    @Autowired
+    SupaBaseImageService supaBaseImageService;
     private final SimpMessagingTemplate messagingTemplate;
 
     public YouTubeService(SimpMessagingTemplate messagingTemplate) {
@@ -65,6 +68,7 @@ public class YouTubeService {
             // Check if the response contains the expected data (successful upload)
             if (response != null && response.getItems() != null && !response.getItems().isEmpty()) {
                 messagingTemplate.convertAndSend("/topic/thumbnail/success", "Thumbnail uploaded successfully.");
+                supaBaseImageService.deleteFileWithPath(thumbnailFile);
             } else {
                 messagingTemplate.convertAndSend("/topic/thumbnail/error", "Thumbnail upload failed: No response items found.");
             }
