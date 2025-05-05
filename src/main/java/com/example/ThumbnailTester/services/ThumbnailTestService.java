@@ -102,7 +102,7 @@ public class ThumbnailTestService {
 
             for (ImageOption option : imageOptions) {
                 log.info("validation started");
-                if (!thumbnailService.isValid(option.getFileBase64())) {
+                if (!thumbnailService.isValid(option.getFileUrl())) {
                     messagingTemplate.convertAndSend("/topic/thumbnail/error", "UnsupportedImage");
                     return;
                 }
@@ -170,8 +170,10 @@ public class ThumbnailTestService {
             }, new java.util.Date(System.currentTimeMillis() + delayMillis));
 
         } catch (Exception e) {
+            log.error("Thumbnail test failed", e); // добавь это
             messagingTemplate.convertAndSend("/topic/thumbnail/error", "InternalServerError");
         }
+
     }
 
     private CriterionOfWinner getCriterionOfWinner(ThumbnailRequest thumbnailRequest) {
@@ -189,9 +191,11 @@ public class ThumbnailTestService {
 
     @Async
     public void startTest(ThumbnailRequest thumbnailRequest, TestConfType testConfType, ThumbnailData thumbnailData) {
+        log.info("startTest");
         List<ImageOption> files64 = mapper.listBase64ToImageOptionList(thumbnailRequest.getImages(), thumbnailData);
         List<String> texts = thumbnailRequest.getTexts();
         long delayMillis = thumbnailRequest.getTestConfRequest().getTestingByTimeMinutes() * 60 * 1000L;
+        log.info("delayMillis" + delayMillis);
 
         // Initialize queue for the video URL
         ThumbnailQueue thumbnailQueue = thumbnailQueueService.getQueue(thumbnailRequest.getVideoUrl());
@@ -200,6 +204,7 @@ public class ThumbnailTestService {
         for (ImageOption imageOption : thumbnailData.getImageOptions()) {
             thumbnailQueue.add(new ThumbnailQueueItem(thumbnailRequest.getVideoUrl(), imageOption));
         }
+        log.info("thumbnailQueue" + thumbnailQueue);
 
         // Determine the number of tests to run based on the test configuration type
         int count = switch (testConfType) {
@@ -208,6 +213,7 @@ public class ThumbnailTestService {
             case THUMBNAILTEXT ->
                     (files64 != null && texts != null && files64.size() == texts.size()) ? files64.size() : 0;
         };
+        log.info("count" + count);
 
         if (count == 0) {
             messagingTemplate.convertAndSend("/topic/thumbnail/error", "InvalidInputs");
@@ -215,14 +221,17 @@ public class ThumbnailTestService {
         }
 
         List<CompletableFuture<Void>> futures = new java.util.ArrayList<>();
+        log.info("futures" + futures);
 
         ThumbnailQueueItem thumbnailQueueItem;
+        log.info("While started");
         while ((thumbnailQueueItem = thumbnailQueue.poll()) != null) {
             final ThumbnailQueueItem currentItem = thumbnailQueueItem;
             thumbnailQueue.delete(currentItem);
             currentItem.setActive(true);
             futures.add(processSingleTest(thumbnailData, currentItem, delayMillis, testConfType));
         }
+        log.info("while ended");
 
         // После всех тестов определяем победителя и отправляем статистику
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenRun(() -> {
@@ -243,33 +252,47 @@ public class ThumbnailTestService {
             TestConfType testConfType
     ) {
         return CompletableFuture.runAsync(() -> {
+            log.info("processSingleTest");
             try {
                 ImageOption imageOption = thumbnailQueueItem.getImageOption();
-                String base64 = imageOption.getFileBase64();
+                String base64 = imageOption.getFileUrl();
                 String text = imageOption.getText();
+                log.info("inf from req");
 
                 // Update the thumbnail if required
                 if (testConfType == TestConfType.THUMBNAIL || testConfType == TestConfType.THUMBNAILTEXT) {
+                    log.info("upload thumbnail started");
                     File imageFile = imageParser.getFileFromBase64(base64);
+
+                    log.info("file received");
                     youTubeService.uploadThumbnail(thumbnailData, imageFile);
+                    log.info("upload thumbnail");
                 }
+
 
                 // Update the video title if required
+                log.info("update the video title if req");
                 if (testConfType == TestConfType.THUMBNAILTEXT || testConfType == TestConfType.TEXT) {
                     youTubeService.updateVideoTitle(thumbnailData.getUser(), thumbnailData.getVideoUrl(), text);
+                    log.info("update ended");
                 }
 
+
                 // Wait for the specified delay
+                log.info("waiting started");
                 Thread.sleep(delayMillis);
 
                 // Fetch and save statistics
+                log.info("fetch and save stats started");
                 ThumbnailStats stats = youTubeAnalyticsService.getStats(thumbnailData.getUser(), LocalDate.now(), thumbnailQueueItem);
                 if (stats != null) {
+                    log.info("stats != null");
                     imageOption.setThumbnailStats(stats);
                     stats.setImageOption(imageOption);
                     imageOption.setThumbnail(thumbnailData);
 
                     thumbnailService.save(thumbnailData);
+                    log.info("thumbnail saved");
 
                     // Send intermediate result via WebSocket
                     messagingTemplate.convertAndSend("/topic/thumbnail/progress", imageOption);

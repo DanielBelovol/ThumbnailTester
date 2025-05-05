@@ -25,7 +25,7 @@ public class ThumbnailData {
     @Column(nullable = false, name = "video_url")
     private String videoUrl;
 
-    @OneToOne(mappedBy = "thumbnailData")
+    @OneToOne(mappedBy = "thumbnailData", cascade = CascadeType.ALL)
     private ThumbnailTestConf testConf;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -51,10 +51,11 @@ public class ThumbnailData {
     public String toString() {
         return "ThumbnailData{" +
                 "id=" + id +
-                ", imageOptions.size=" + (imageOptions != null ? imageOptions.size() : 0) + // Показываем размер коллекции
+                ", imageOptions.size=" + (imageOptions != null ? imageOptions.size() : 0) +
                 ", videoUrl='" + videoUrl + '\'' +
-                ", testConf=" + testConf.toString() +
-                ", user=" + user +
+                ", testConfId=" + (testConf != null ? testConf.getId() : "null") +
+                ", userId=" + (user != null ? user.getId() : "null") +
                 '}';
     }
+
 }

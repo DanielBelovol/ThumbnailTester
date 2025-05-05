@@ -73,33 +73,36 @@ public class ImageParser {
     }
 
     public File getFileFromBase64(String base64) {
-        File tempDir = new File("temp");
-        if (!tempDir.exists()) {
-            log.info("Creating temporary directory 'temp' for storing the file.");
-            tempDir.mkdirs();
+//        File tempDir = new File("temp");
+//        if (!tempDir.exists()) {
+//            log.info("Creating temporary directory 'temp' for storing the file.");
+//            tempDir.mkdirs();
+//        }
+//
+//        String safeName = String.valueOf(base64.hashCode());
+//        File file = new File(tempDir, safeName + ".jpg");
+//
+//        // Проверка прав на запись в директорию
+//        if (!tempDir.canWrite()) {
+//            log.error("Cannot write to directory: " + tempDir.getAbsolutePath());
+//            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Cannot write to directory");
+//            return null;
+//        }
+//
+//        byte[] decodedBytes = Base64.getDecoder().decode(base64);
+//        try (FileOutputStream fos = new FileOutputStream(file)) {
+//            log.info("Writing decoded Base64 string to file: " + file.getAbsolutePath());
+//            fos.write(decodedBytes);
+//            log.info("Base64 string successfully written to file.");
+//        } catch (IOException e) {
+//            log.error("IOException occurred while writing Base64 string to file: " + e.getMessage(), e);
+//            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Failed to write Base64 string to file");
+//        }
+        File file1 = new File("/app/resources/image1.jpeg");
+        if (!file1.exists()) {
+            log.error("File does not exist at path: " + file1.getAbsolutePath());
         }
-
-        String safeName = String.valueOf(base64.hashCode());
-        File file = new File(tempDir, safeName + ".jpg");
-
-        // Проверка прав на запись в директорию
-        if (!tempDir.canWrite()) {
-            log.error("Cannot write to directory: " + tempDir.getAbsolutePath());
-            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Cannot write to directory");
-            return null;
-        }
-
-        byte[] decodedBytes = Base64.getDecoder().decode(base64);
-        try (FileOutputStream fos = new FileOutputStream(file)) {
-            log.info("Writing decoded Base64 string to file: " + file.getAbsolutePath());
-            fos.write(decodedBytes);
-            log.info("Base64 string successfully written to file.");
-        } catch (IOException e) {
-            log.error("IOException occurred while writing Base64 string to file: " + e.getMessage(), e);
-            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Failed to write Base64 string to file");
-        }
-
-        return file;
+        return file1;
     }
 
 }

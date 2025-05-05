@@ -70,45 +70,56 @@ public class Mapper {
                     thumbnailRequest.getUserDTO().getRefreshToken()));
         }
 
-        // Теперь создаём imageOptions после создания thumbnailData
-        List<ImageOption> imageOptions = listBase64ToImageOptionList(
-                thumbnailRequest.getImages(), thumbnailData);
+        TestConfType type = thumbnailData.getTestConf() != null ? thumbnailData.getTestConf().getTestType() : TestConfType.THUMBNAIL;
 
+        List<ImageOption> imageOptions = createImageOptions(
+                thumbnailRequest.getImages(),
+                thumbnailRequest.getTexts(),
+                thumbnailData,
+                type
+        );
         thumbnailData.setImageOptions(imageOptions);
-
         return thumbnailData;
     }
+
 
 
     public ImageOption thumbnailDataToImageOption(ThumbnailQueueItem thumbnailQueueItem) {
         return thumbnailQueueItem.getImageOption();
     }
-    public ImageOption imageToImageOption(String fileBase64, ThumbnailData thumbnailData) {
-        ImageOption imageOption1 = new ImageOption();
-        imageOption1.setText(null);
-        imageOption1.setFileBase64(fileBase64);
-        imageOption1.setThumbnail(thumbnailData);
-        imageOption1.setWinner(false);
-        imageOption1.setThumbnailStats(null);
-        return imageOption1;
-    }
-
-    public List<ImageOption> listBase64ToImageOptionList(List<String> fileBase64List, ThumbnailData thumbnailData) {
+    public List<ImageOption> createImageOptions(List<String> fileUrls, List<String> texts, ThumbnailData thumbnailData, TestConfType type) {
         List<ImageOption> imageOptions = new ArrayList<>();
-
         if (thumbnailData == null) {
             log.error("ThumbnailData is null when attempting to create image options");
-        } else {
-            log.info("ThumbnailData is not null, proceeding with image option creation");
+            return imageOptions;
         }
 
-        log.info("Starting foreach method.");
-        for (String base64 : fileBase64List) {
-            ImageOption imageOption = imageToImageOption(base64, thumbnailData);
-            imageOptions.add(imageOption);
+        for (int i = 0; i < fileUrls.size(); i++) {
+            ImageOption option = new ImageOption();
+            option.setThumbnail(thumbnailData);
+            option.setWinner(false);
+            option.setThumbnailStats(null);
+
+            switch (type) {
+                case THUMBNAIL:
+                    option.setFileUrl(fileUrls.get(i));
+                    break;
+                case TEXT:
+                    option.setText(texts.get(i));
+                    break;
+                case THUMBNAILTEXT:
+                    option.setFileUrl(fileUrls.get(i));
+                    option.setText(texts.get(i));
+                    if (texts.size() > i && fileUrls.size() > i) {
+                        option.setText(texts.get(i));
+                        option.setFileUrl(fileUrls.get(i));
+                    }
+                    break;
+            }
+
+            imageOptions.add(option);
         }
-        log.info("ended foreach method.");
+
         return imageOptions;
     }
-
 }

@@ -20,7 +20,7 @@ CREATE TABLE thumbnails
 CREATE TABLE image_options
 (
     id           BIGSERIAL PRIMARY KEY,
-    file_base64  TEXT   NOT NULL,
+    file_url  TEXT   NOT NULL,
     text         VARCHAR(255),
     is_winner    BOOLEAN DEFAULT FALSE,
     thumbnail_id BIGINT NOT NULL,

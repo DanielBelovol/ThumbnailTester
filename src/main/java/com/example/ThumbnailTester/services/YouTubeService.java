@@ -12,6 +12,7 @@ import com.google.api.services.youtube.model.ThumbnailSetResponse;
 import com.google.api.services.youtube.model.Video;
 import com.google.api.services.youtube.model.VideoListResponse;
 import com.google.api.services.youtube.model.VideoSnippet;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 
+@Slf4j
 @Service
 public class YouTubeService {
     @Value("${youtube.client.id}")
@@ -38,7 +40,9 @@ public class YouTubeService {
 
     public void uploadThumbnail(ThumbnailData thumbnailData, File thumbnailFile) {
         try {
+            log.info("Uploading thumbnail started");
             Credential credential = buildCredentialFromRefreshToken(thumbnailData.getUser());
+            log.info("Refresh token: " + credential.getRefreshToken());
             YouTube youTube = new YouTube.Builder(
                     credential.getTransport(),
                     credential.getJsonFactory(),
@@ -48,12 +52,15 @@ public class YouTubeService {
 
             // Prepare the thumbnail file for upload
             FileContent mediaContent = new FileContent("image/jpeg", thumbnailFile);
+            log.info("file content: " + mediaContent);
 
             // Execute the thumbnail upload
             YouTube.Thumbnails.Set thumbnailSet = youTube.thumbnails()
                     .set(getVideoIdFromUrl(thumbnailData.getVideoUrl()), mediaContent);
+            log.info("thumbnail set: " + thumbnailSet);
 
             ThumbnailSetResponse response = thumbnailSet.execute();
+            log.info("thumbnail response: " + response);
 
             // Check if the response contains the expected data (successful upload)
             if (response != null && response.getItems() != null && !response.getItems().isEmpty()) {
@@ -69,6 +76,7 @@ public class YouTubeService {
 
     public void updateVideoTitle(UserData user, String videoId, String newTitle) {
         try {
+            log.info("update video title");
             Credential credential = buildCredentialFromRefreshToken(user);
 
             YouTube youtube = new YouTube.Builder(

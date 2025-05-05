@@ -1,6 +1,8 @@
 package com.example.ThumbnailTester.controller;
 
 import com.example.ThumbnailTester.Request.ThumbnailRequest;
+import com.example.ThumbnailTester.data.thumbnail.TestConfType;
+import com.example.ThumbnailTester.data.thumbnail.ThumbnailData;
 import com.example.ThumbnailTester.dto.ImageOption;
 import com.example.ThumbnailTester.dto.ThumbnailQueue;
 import com.example.ThumbnailTester.dto.ThumbnailQueueItem;
@@ -35,16 +37,19 @@ public class WebSocketController {
         // verify if there are images in the request
         log.info("Received thumbnail request: " + request.getVideoUrl());
         if (request.getImages() == null || request.getImages().isEmpty()) {
-            // sending error message if no images are provided
+            // sending an error message if no images are provided
             messagingTemplate.convertAndSend("/topic/thumbnail/error", "NoImagesProvided");
             return;
         }
+        ThumbnailData thumbnailData = mapper.thumbnailRequestToData(request);
 
-        // iterate through the image options
-        for (ImageOption imageOption : mapper.listBase64ToImageOptionList(request.getImages(),null)) {
-            // create a ThumbnailQueueItem
+        if (thumbnailData.getTestConf() == null) {
+            messagingTemplate.convertAndSend("/topic/thumbnail/error", "InvalidTestConfiguration");
+            return;
+        }
+
+        for (ImageOption imageOption : thumbnailData.getImageOptions()) {
             ThumbnailQueueItem queueItem = new ThumbnailQueueItem(request.getVideoUrl(), imageOption);
-            // add the item to the queue
             thumbnailQueueService.addToQueue(queueItem.getVideoUrl(), queueItem);
         }
 

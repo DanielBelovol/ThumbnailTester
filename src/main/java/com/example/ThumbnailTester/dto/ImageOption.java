@@ -17,8 +17,8 @@ public class ImageOption {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "file_base64", nullable = false, columnDefinition = "TEXT")
-    private String fileBase64;
+    @Column(name = "file_url", nullable = false, columnDefinition = "TEXT")
+    private String fileUrl;
 
     @Column(name = "text")
     private String text;
