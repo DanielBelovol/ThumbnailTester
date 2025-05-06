@@ -37,6 +37,12 @@ public class ThumbnailTestConf {
     @JoinColumn(name = "thumbnail_id")
     private ThumbnailData thumbnailData;
 
+    public void setThumbnailData(ThumbnailData thumbnailData) {
+        this.thumbnailData = thumbnailData;
+        if (thumbnailData != null && thumbnailData.getTestConf() != this) {
+            thumbnailData.setTestConf(this);
+        }
+    }
 
     @Override
     public String toString() {

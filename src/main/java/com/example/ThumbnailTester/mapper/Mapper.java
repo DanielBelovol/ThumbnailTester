@@ -56,6 +56,7 @@ public class Mapper {
 
     public ThumbnailData thumbnailRequestToData(ThumbnailRequest thumbnailRequest) {
         log.info("Entering thumbnailRequestToData method.");
+
         UserData userData = userService.getByGoogleId(thumbnailRequest.getUserDTO().getGoogleId());
         if(userData==null){
             userData = new UserData(
@@ -68,12 +69,10 @@ public class Mapper {
         thumbnailData.setVideoUrl(thumbnailRequest.getVideoUrl());
         thumbnailData.setTestConf(testConfRequestToDTO(thumbnailRequest.getTestConfRequest()));
 
-        if (userService.isExistById(userData.getId())) {
+        if (userData.getId() != null && userService.isExistById(userData.getId())) {
             thumbnailData.setUser(userData);
         } else {
-            thumbnailData.setUser(new UserData(
-                    thumbnailRequest.getUserDTO().getGoogleId(),
-                    thumbnailRequest.getUserDTO().getRefreshToken()));
+            thumbnailData.setUser(userData); // or create a new UserData if needed
         }
 
         TestConfType type = thumbnailData.getTestConf() != null ? thumbnailData.getTestConf().getTestType() : TestConfType.THUMBNAIL;

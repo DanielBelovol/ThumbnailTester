@@ -38,6 +38,7 @@ CREATE TABLE thumbnail_stats
     average_view_duration   DOUBLE PRECISION,
     adv_ctr                 DOUBLE PRECISION,
     comments                INT,
+    shares                  INT,
     likes                   INT,
     subscribers_gained      INT,
     average_view_percentage DOUBLE PRECISION,

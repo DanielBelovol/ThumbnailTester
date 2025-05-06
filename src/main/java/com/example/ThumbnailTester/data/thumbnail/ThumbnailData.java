@@ -47,6 +47,13 @@ public class ThumbnailData {
         }
     }
 
+    public void setTestConf(ThumbnailTestConf testConf) {
+        this.testConf = testConf;
+        if (testConf != null && testConf.getThumbnailData() != this) {
+            testConf.setThumbnailData(this);
+        }
+    }
+
     @Override
     public String toString() {
         return "ThumbnailData{" +

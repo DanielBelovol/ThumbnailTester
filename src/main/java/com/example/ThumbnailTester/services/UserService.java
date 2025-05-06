@@ -24,7 +24,8 @@ public class UserService {
         return userRepository.findByGoogleId(googleId);
     }
 
-    public void save(UserData userData) {
+    public UserData save(UserData userData) {
         userRepository.save(userData);
+        return userData;
     }
 }

@@ -2,7 +2,6 @@ package com.example.ThumbnailTester.services;
 
 import com.example.ThumbnailTester.data.thumbnail.ThumbnailData;
 import com.example.ThumbnailTester.repositories.ThumbnailRepository;
-import com.example.ThumbnailTester.repositories.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,8 +25,9 @@ public class ThumbnailService {
         this.messagingTemplate = messagingTemplate;
     }
 
-    public void save(ThumbnailData thumbnailData) {
+    public ThumbnailData save(ThumbnailData thumbnailData) {
         thumbnailRepository.save(thumbnailData);
+        return thumbnailData;
     }
 
     public boolean isValid(File fileImage) {

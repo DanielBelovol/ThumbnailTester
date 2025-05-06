@@ -17,9 +17,13 @@ public class SupaBaseImageService {
     public File getFileFromPath(URL url){
         log.info("getFileFromPath started with url: " + url);
         String fileName = getFileName(url);
-        File directory = new File("src/main/resources/thumbnails");
-        if(!directory.exists()){
-            directory.mkdir();
+        File directory = new File(System.getProperty("java.io.tmpdir"), "thumbnails");
+
+        if (!directory.exists()) {
+            boolean created = directory.mkdirs();
+            if (!created) {
+                log.error("Failed to create directory: " + directory.getAbsolutePath());
+            }
         }
         File file = new File(directory, fileName);
         log.info("created file: " + file.getAbsolutePath());
@@ -30,26 +34,38 @@ public class SupaBaseImageService {
                 out.write(buffer, 0, bytesRead);
             }
             return file;
-        }catch (Exception e){
-            log.error(e.getMessage());
+        }catch (Exception e) {
+            log.error("Error downloading file from URL: " + url, e);
         }
         return null;
     }
 
     public String getFileName(URL url) {
         log.info("get fileName started with url: " + url);
-        // Example: https://.../user123/my_thumbnail.jpg -> my_thumbnail.jpg
+        // Extract filename from URL path
         String path = url.getPath();
         return Paths.get(path).getFileName().toString();
     }
-    public void deleteFileWithPath(File file){
-        log.info("trying to delete file: " + file.getAbsolutePath());
-        try{
-        file.delete();
-        }catch (Exception e){
-            log.error(e.getMessage());
+
+    public void deleteFileWithPath(File file) {
+        if (file == null) {
+            log.warn("File is null, cannot delete");
             return;
         }
-        log.info("deleted file: " + file.getAbsolutePath());
+        if (!file.exists()) {
+            log.warn("File does not exist: " + file.getAbsolutePath());
+            return;
+        }
+        log.info("trying to delete file: " + file.getAbsolutePath());
+        try {
+            boolean deleted = file.delete();
+            if (deleted) {
+                log.info("deleted file: " + file.getAbsolutePath());
+            } else {
+                log.warn("Failed to delete file: " + file.getAbsolutePath());
+            }
+        } catch (Exception e) {
+            log.error("Error deleting file: " + file.getAbsolutePath(), e);
+        }
     }
 }

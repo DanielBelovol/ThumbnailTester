@@ -38,6 +38,31 @@ public class YouTubeAnalyticsService {
         this.messagingTemplate = messagingTemplate;
     }
 
+    private YouTubeAnalytics buildAnalyticsServiceFromUser(UserData user) {
+        try {
+            var credential = new GoogleCredential.Builder()
+                    .setTransport(GoogleNetHttpTransport.newTrustedTransport())
+                    .setJsonFactory(JacksonFactory.getDefaultInstance())
+                    .setClientSecrets(clientId, clientSecret)
+                    .build()
+                    .setRefreshToken(user.getRefreshToken());
+
+            // Refresh access token
+            credential.refreshToken();
+
+            return new YouTubeAnalytics.Builder(
+                    credential.getTransport(),
+                    credential.getJsonFactory(),
+                    credential
+            ).setApplicationName(applicationName).build();
+        } catch (IOException | GeneralSecurityException e) {
+            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Error building YouTube Analytics service: " + e.getMessage());
+        } catch (Exception e) {
+            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Unexpected error: " + e.getMessage());
+        }
+        return null;
+    }
+
     public ThumbnailStats getStats(UserData user, LocalDate startDate, ThumbnailQueueItem thumbnailQueueItem) {
         try {
             if (thumbnailQueueItem == null) {
@@ -54,8 +79,8 @@ public class YouTubeAnalyticsService {
             }
 
             ResultTable analyticsResponse = analytics.reports()
-                    .query("channel==MINE", startDate.toString(), "2025-12-31",
-                            "views,comments,likes,subscribersGained,shares,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,impressions,impressionsClickThroughRate")
+                    .query("channel==MINE", startDate.toString(), LocalDate.now().toString(),
+                            "views,comments,likes,subscribersGained,shares,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,impressions,impressionsCtr")
                     .setFilters("video==" + videoId)
                     .execute();
 
@@ -73,7 +98,7 @@ public class YouTubeAnalyticsService {
             stats.setLikes(toInt(data.get(2)));
             stats.setSubscribersGained(toInt(data.get(3)));
             stats.setShares(toInt(data.get(4)));
-            stats.setTotalWatchTime((Long) data.get(5));
+            stats.setTotalWatchTime(Long.valueOf(toInt(data.get(5)))); // cast to int or long depending on your entity
             stats.setAverageViewDuration(toDouble(data.get(6)));
             stats.setAverageViewPercentage(toDouble(data.get(7)));
             stats.setImpressions(toInt(data.get(8)));
@@ -84,34 +109,11 @@ public class YouTubeAnalyticsService {
 
             return stats;
         } catch (IOException e) {
-            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Error updating video title: " + e.getMessage());
+            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Error fetching YouTube Analytics data: " + e.getMessage());
         }
         return null;
     }
 
-    private YouTubeAnalytics buildAnalyticsServiceFromUser(UserData user) {
-        try {
-            var credential = new GoogleCredential.Builder()
-                    .setTransport(GoogleNetHttpTransport.newTrustedTransport())
-                    .setJsonFactory(JacksonFactory.getDefaultInstance())
-                    .setClientSecrets(clientId, clientSecret)
-                    .build()
-                    .setRefreshToken(user.getRefreshToken());
-
-            credential.refreshToken();
-
-            return new YouTubeAnalytics.Builder(
-                    credential.getTransport(),
-                    credential.getJsonFactory(),
-                    credential
-            ).setApplicationName(applicationName).build();
-        } catch (IOException | GeneralSecurityException e) {
-            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Error building YouTube Analytics service: " + e.getMessage());
-        } catch (Exception e) {
-            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Unexpected error: " + e.getMessage());
-        }
-        return null;
-    }
 
 
     private String extractVideoIdFromUrl(String url) {

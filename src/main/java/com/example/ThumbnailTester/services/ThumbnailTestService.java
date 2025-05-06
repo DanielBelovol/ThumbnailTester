@@ -42,9 +42,9 @@ public class ThumbnailTestService {
     @Autowired
     private YouTubeService youTubeService;
     @Autowired
-    private YouTubeAnalyticsService youTubeAnalyticsService;
+    private UserService userService;
     @Autowired
-    private ImageParser imageParser;
+    private YouTubeAnalyticsService youTubeAnalyticsService;
     @Autowired
     private ThumbnailRepository thumbnailRepository;
     private static final Logger log = LoggerFactory.getLogger(ThumbnailTestService.class);
@@ -118,19 +118,35 @@ public class ThumbnailTestService {
             }
 
             // 5. Save thumbnail test data
-            log.info("saving thumbnaildata");
-            thumbnailService.save(thumbnailData);
+            // Save user first if needed
+            UserData user = thumbnailData.getUser();
+            if (user.getId() == null) {
+                user = userService.save(user);
+                thumbnailData.setUser(user);
+            }
+
+            // Save thumbnailData first
+            thumbnailData = thumbnailService.save(thumbnailData);
+
+            // Set bidirectional association
+            ThumbnailTestConf testconf = thumbnailData.getTestConf();
+            if (testconf != null) {
+                testconf.setThumbnailData(thumbnailData);
+            }
+
 
             // 6. Start the test
             log.info("startTest");
-            startTest(thumbnailRequest, testConf.getTestType(), thumbnailData);
+            startTest(thumbnailRequest, testconf.getTestType(), thumbnailData);
 
             // 7. Schedule sending final test results
             long delayMillis = thumbnailRequest.getTestConfRequest().getTestingByTimeMinutes() * 60 * 1000L;
 
+            ThumbnailData finalThumbnailData = thumbnailData;
+            ThumbnailData finalThumbnailData1 = thumbnailData;
             taskScheduler.schedule(() -> {
                 try {
-                    messagingTemplate.convertAndSend("/topic/thumbnail/result", getTestResults(thumbnailData, thumbnailData.getTestConf().getCriterionOfWinner()));
+                    messagingTemplate.convertAndSend("/topic/thumbnail/result", getTestResults(finalThumbnailData, finalThumbnailData1.getTestConf().getCriterionOfWinner()));
                 } catch (Exception e) {
                     messagingTemplate.convertAndSend("/topic/thumbnail/error", "ErrorSendingResults");
                 }
@@ -143,24 +159,17 @@ public class ThumbnailTestService {
     }
 
 
-    @Async
-    public void startTest(ThumbnailRequest thumbnailRequest, TestConfType testConfType, ThumbnailData thumbnailData) {
-        log.info("startTest");
-        List<ImageOption> imageOptions = thumbnailData.getImageOptions();
-        List<String> texts = thumbnailRequest.getTexts();
-        long delayMillis = thumbnailRequest.getTestConfRequest().getTestingByTimeMinutes() * 60 * 1000L;
-        log.info("delayMillis" + delayMillis);
-
-        // Initialize queue for the video URL
+    @Async public void startTest(ThumbnailRequest thumbnailRequest, TestConfType testConfType, ThumbnailData thumbnailData) { log.info("startTest"); List  imageOptions = thumbnailData.getImageOptions(); List  texts = thumbnailRequest.getTexts(); long delayMillis = thumbnailRequest.getTestConfRequest().getTestingByTimeMinutes() * 60 * 1000L; log.info("delayMillis" + delayMillis);
+// Initialize queue for the video URL
         ThumbnailQueue thumbnailQueue = thumbnailQueueService.getQueue(thumbnailRequest.getVideoUrl());
 
-        // Add all image options to the queue
+// Add all image options to the queue
         for (ImageOption imageOption : thumbnailData.getImageOptions()) {
             thumbnailQueue.add(new ThumbnailQueueItem(thumbnailRequest.getVideoUrl(), imageOption));
         }
         log.info("thumbnailQueue" + thumbnailQueue);
 
-        // Determine the number of tests to run based on the test configuration type
+// Determine the number of tests to run based on the test configuration type
         int count = switch (testConfType) {
             case THUMBNAIL -> imageOptions != null ? imageOptions.size() : 0;
             case TEXT -> texts != null ? texts.size() : 0;
@@ -174,89 +183,76 @@ public class ThumbnailTestService {
             return;
         }
 
-        List<CompletableFuture<Void>> futures = new java.util.ArrayList<>();
-        log.info("futures" + futures);
-
         ThumbnailQueueItem thumbnailQueueItem;
         log.info("While started");
+
+// Последовательное выполнение тестов
         while ((thumbnailQueueItem = thumbnailQueue.poll()) != null) {
-            final ThumbnailQueueItem currentItem = thumbnailQueueItem;
-            thumbnailQueue.delete(currentItem);
-            currentItem.setActive(true);
-            futures.add(processSingleTest(thumbnailData, currentItem, delayMillis, testConfType));
+            thumbnailQueue.delete(thumbnailQueueItem);
+            thumbnailQueueItem.setActive(true);
+            try {
+                // Синхронно вызываем метод обработки теста
+                processSingleTestSync(thumbnailData, thumbnailQueueItem, delayMillis, testConfType);
+            } catch (Exception e) {
+                messagingTemplate.convertAndSend("/topic/thumbnail/error", "InternalServerError: " + e.getMessage());
+                log.error("Error during processSingleTestSync", e);
+            }
         }
         log.info("while ended");
 
-        // После всех тестов определяем победителя и отправляем статистику
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenRun(() -> {
-            try {
-                List<ImageOption> options = getTestResults(thumbnailData, thumbnailData.getTestConf().getCriterionOfWinner());
-                thumbnailService.save(thumbnailData); // Сохраняем обновлённые isWinner
-                messagingTemplate.convertAndSend("/topic/thumbnail/final", options);
-            } catch (Exception e) {
-                messagingTemplate.convertAndSend("/topic/thumbnail/error", "FinalResultError");
-            }
-        });
+// После всех тестов определяем победителя и отправляем статистику
+        try {
+            List<ImageOption> options = getTestResults(thumbnailData, thumbnailData.getTestConf().getCriterionOfWinner());
+            thumbnailService.save(thumbnailData); // Сохраняем обновлённые isWinner
+            messagingTemplate.convertAndSend("/topic/thumbnail/final", options);
+        } catch (Exception e) {
+            messagingTemplate.convertAndSend("/topic/thumbnail/error", "FinalResultError");
+        }
     }
+    private void processSingleTestSync( ThumbnailData thumbnailData, ThumbnailQueueItem thumbnailQueueItem, long delayMillis, TestConfType testConfType ) { log.info("processSingleTestSync"); try { ImageOption imageOption = thumbnailQueueItem.getImageOption(); String text = imageOption.getText(); log.info("inf from req");
+        // Update the thumbnail if required
+        if (testConfType == TestConfType.THUMBNAIL || testConfType == TestConfType.THUMBNAILTEXT) {
+            log.info("upload thumbnail started");
+            File imageFile = supaBaseImageService.getFileFromPath(new URL(imageOption.getFileUrl()));
 
-    private CompletableFuture<Void> processSingleTest(
-            ThumbnailData thumbnailData,
-            ThumbnailQueueItem thumbnailQueueItem,
-            long delayMillis,
-            TestConfType testConfType
-    ) {
-        return CompletableFuture.runAsync(() -> {
-            log.info("processSingleTest");
-            try {
-                ImageOption imageOption = thumbnailQueueItem.getImageOption();
-                String text = imageOption.getText();
-                log.info("inf from req");
+            log.info("file received");
+            youTubeService.uploadThumbnail(thumbnailData, imageFile);
+            Thread.sleep(10000);
+            supaBaseImageService.deleteFileWithPath(imageFile);
+            log.info("File has been deleted");
+            log.info("upload thumbnail");
+        }
 
-                // Update the thumbnail if required
-                if (testConfType == TestConfType.THUMBNAIL || testConfType == TestConfType.THUMBNAILTEXT) {
-                    log.info("upload thumbnail started");
-                    File imageFile = supaBaseImageService.getFileFromPath(new URL(imageOption.getFileUrl()));
+        // Update the video title if required
+        log.info("update the video title if req");
+        if (testConfType == TestConfType.THUMBNAILTEXT || testConfType == TestConfType.TEXT) {
+            youTubeService.updateVideoTitle(thumbnailData.getUser(), thumbnailData.getVideoUrl(), text);
+            log.info("update ended");
+        }
 
-                    log.info("file received");
-                    youTubeService.uploadThumbnail(thumbnailData, imageFile);
-                    Thread.sleep(10000);
-                    supaBaseImageService.deleteFileWithPath(imageFile);
-                    log.info("File has been deleted");
-                    log.info("upload thumbnail");
-                }
+        // Wait for the specified delay
+        log.info("waiting started");
+        Thread.sleep(delayMillis);
 
+        // Fetch and save statistics
+        log.info("fetch and save stats started");
+        ThumbnailStats stats = youTubeAnalyticsService.getStats(thumbnailData.getUser(), LocalDate.now(), thumbnailQueueItem);
+        if (stats != null) {
+            log.info("stats != null");
+            imageOption.setThumbnailStats(stats);
+            stats.setImageOption(imageOption);
+            imageOption.setThumbnail(thumbnailData);
 
-                // Update the video title if required
-                log.info("update the video title if req");
-                if (testConfType == TestConfType.THUMBNAILTEXT || testConfType == TestConfType.TEXT) {
-                    youTubeService.updateVideoTitle(thumbnailData.getUser(), thumbnailData.getVideoUrl(), text);
-                    log.info("update ended");
-                }
+            thumbnailService.save(thumbnailData);
+            log.info("thumbnail saved");
 
-
-                // Wait for the specified delay
-                log.info("waiting started");
-                Thread.sleep(delayMillis);
-
-                // Fetch and save statistics
-                log.info("fetch and save stats started");
-                ThumbnailStats stats = youTubeAnalyticsService.getStats(thumbnailData.getUser(), LocalDate.now(), thumbnailQueueItem);
-                if (stats != null) {
-                    log.info("stats != null");
-                    imageOption.setThumbnailStats(stats);
-                    stats.setImageOption(imageOption);
-                    imageOption.setThumbnail(thumbnailData);
-
-                    thumbnailService.save(thumbnailData);
-                    log.info("thumbnail saved");
-
-                    // Send intermediate result via WebSocket
-                    messagingTemplate.convertAndSend("/topic/thumbnail/progress", imageOption);
-                }
-            } catch (InterruptedException | MalformedURLException e) {
-                messagingTemplate.convertAndSend("/topic/thumbnail/error", "InternalServerError"+e.getMessage());
-            }
-        });
+            // Send intermediate result via WebSocket
+            messagingTemplate.convertAndSend("/topic/thumbnail/progress", imageOption);
+        }
+    } catch (InterruptedException | MalformedURLException e) {
+        messagingTemplate.convertAndSend("/topic/thumbnail/error", "InternalServerError: " + e.getMessage());
+        log.error("Error in processSingleTestSync", e);
+    }
     }
 
     private List<ImageOption> getTestResults(ThumbnailData thumbnailData, CriterionOfWinner criterion) {
