@@ -2,6 +2,8 @@ package com.example.ThumbnailTester.dto;
 
 import com.example.ThumbnailTester.data.thumbnail.ThumbnailData;
 import com.example.ThumbnailTester.data.thumbnail.ThumbnailStats;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -27,6 +29,7 @@ public class ImageOption {
     private boolean isWinner;
 
     @OneToOne(mappedBy = "imageOption", cascade = CascadeType.ALL)
+    @JsonIgnore
     private ThumbnailStats thumbnailStats;
 
     @ManyToOne(fetch = FetchType.LAZY)

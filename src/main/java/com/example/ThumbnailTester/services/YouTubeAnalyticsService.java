@@ -56,8 +56,8 @@ public class YouTubeAnalyticsService {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://youtubeanalytics.googleapis.com/v2/reports" +
                             "?ids=channel==MINE" +
-                            "&startDate=" + startDate +
-                            "&endDate=2024-05-01" +
+                            "&startDate=" + startDate.toString() +
+                            "&endDate="+ LocalDate.now().toString() +
                             "&metrics=views,impressions,averageViewDuration,comments,shares,likes,subscribersGained,averageViewPercentage,estimatedMinutesWatched" + // Добавляем метрики
                             "&dimensions=video" +
                             "&filters=video==" + extractVideoIdFromUrl(thumbnailQueueItem.getVideoUrl())))
@@ -77,7 +77,9 @@ public class YouTubeAnalyticsService {
             JsonNode rows = responseJson.path("rows");
             if (rows.isEmpty()) {
                 messagingTemplate.convertAndSend("/topic/thumbnail/error", "Нет данных по видео");
-                return null;
+                ThumbnailStats emptyStats = new ThumbnailStats();
+                fillEmptyStats(emptyStats,thumbnailQueueItem);
+                return emptyStats;
             }
 
             JsonNode row = rows.get(0);
@@ -98,20 +100,35 @@ public class YouTubeAnalyticsService {
 
             // Создаем объект ThumbnailStats и заполняем поля
 
-            ThumbnailStats stats = thumbnailQueueItem.getImageOption().getThumbnailStats();
-            stats.setViews(views);
-            stats.setCtr(ctr);
-            stats.setImpressions(impressions);
-            stats.setAverageViewDuration(averageViewDuration);
-            stats.setComments(comments);
-            stats.setShares(shares);
-            stats.setLikes(likes);
-            stats.setSubscribersGained(subscribersGained);
-            stats.setAverageViewPercentage(averageViewPercentage);
-            stats.setTotalWatchTime(totalWatchTime);
+            //old stats
+            ThumbnailStats oldStats = thumbnailQueueItem.getImageOption().getThumbnailStats();
+            if (oldStats == null) {
+                oldStats = fillEmptyStats(new ThumbnailStats(), thumbnailQueueItem); // или как тебе логичнее: пропустить diff, выкинуть ошибку, инициализировать и т.д.
+            }
+
+
+
+            //new stats
+            ThumbnailStats newStats = new ThumbnailStats();
+            if (oldStats != null) {
+                newStats.setId(oldStats.getId());
+            }
+
+            newStats.setViews(views);
+            newStats.setImpressions(impressions);
+            newStats.setAverageViewDuration(averageViewDuration);
+            newStats.setComments(comments);
+            newStats.setShares(shares);
+            newStats.setLikes(likes);
+            newStats.setSubscribersGained(subscribersGained);
+            newStats.setAverageViewPercentage(averageViewPercentage);
+            newStats.setTotalWatchTime(totalWatchTime);
+
+            ThumbnailStats currentStats = calculateStatsDifference(newStats, oldStats);
+            thumbnailQueueItem.getImageOption().setThumbnailStats(currentStats);
 
             // Возвращаем статистику
-            return stats;
+            return currentStats;
         } catch (IOException e) {
             messagingTemplate.convertAndSend("/topic/thumbnail/error", "Ошибка при получении данных YouTube Analytics: " + e.getMessage());
             log.error("error ioexc:"+e.getMessage());
@@ -119,7 +136,9 @@ public class YouTubeAnalyticsService {
             messagingTemplate.convertAndSend("/topic/thumbnail/error", "Ошибка при получении данных YouTube Analytics: " + e.getMessage());
             log.error("error inter:"+e.getMessage());
         }
-        return null;
+        ThumbnailStats emptyStats = new ThumbnailStats();
+        fillEmptyStats(emptyStats, thumbnailQueueItem);
+        return emptyStats;
     }
 
     // Формула для вычисления CTR (Click-Through Rate)
@@ -212,4 +231,20 @@ public class YouTubeAnalyticsService {
         if (node.isNull()) return null;
         return node.asLong();
     }
+    private ThumbnailStats fillEmptyStats(ThumbnailStats stats, ThumbnailQueueItem thumbnailQueueItem) {
+        stats.setViews(0);
+        stats.setImpressions(0);
+        stats.setAverageViewDuration(0.0);
+        stats.setComments(0);
+        stats.setShares(0);
+        stats.setLikes(0);
+        stats.setSubscribersGained(0);
+        stats.setAverageViewPercentage(0.0);
+        stats.setTotalWatchTime(0L);
+        stats.setCtr(0.0);
+
+        stats.setImageOption(thumbnailQueueItem.getImageOption());
+        return stats;
+    }
+
 }

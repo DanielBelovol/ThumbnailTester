@@ -16,7 +16,7 @@ services:
       - thumbnail_thumbnails:/app/thumbnails
 
   thumbnail-test-db:
-    image: postgres:16
+    image: postgres:15
     container_name: thumbnail-test-db
     environment:
       POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME}
