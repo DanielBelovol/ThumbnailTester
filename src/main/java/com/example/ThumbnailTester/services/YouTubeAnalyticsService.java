@@ -3,24 +3,31 @@ package com.example.ThumbnailTester.services;
 import com.example.ThumbnailTester.data.thumbnail.ThumbnailStats;
 import com.example.ThumbnailTester.data.user.UserData;
 import com.example.ThumbnailTester.dto.ThumbnailQueueItem;
-import com.example.ThumbnailTester.mapper.Mapper;
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
-import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.api.services.youtubeAnalytics.YouTubeAnalytics;
-import com.google.api.services.youtubeAnalytics.model.ResultTable;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.security.GeneralSecurityException;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
-import java.util.List;
 
 @Service
 public class YouTubeAnalyticsService {
+    private static final Logger log = LoggerFactory.getLogger(YouTubeAnalyticsService.class);
+
     private final SimpMessagingTemplate messagingTemplate;
     @Value("${youtube.client.id}")
     private String clientId;
@@ -30,88 +37,157 @@ public class YouTubeAnalyticsService {
 
     @Value("${application.name}")
     private String applicationName;
+    private static final String APPLICATION_NAME = "YOUR_APPLICATION_NAME";
+    private static final JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
 
-    @Autowired
-    private Mapper mapper;
 
     public YouTubeAnalyticsService(SimpMessagingTemplate messagingTemplate) {
         this.messagingTemplate = messagingTemplate;
     }
 
-    private YouTubeAnalytics buildAnalyticsServiceFromUser(UserData user) {
+    public ThumbnailStats getStats(UserData user, LocalDate startDate, ThumbnailQueueItem thumbnailQueueItem) {
         try {
-            var credential = new GoogleCredential.Builder()
-                    .setTransport(GoogleNetHttpTransport.newTrustedTransport())
-                    .setJsonFactory(JacksonFactory.getDefaultInstance())
-                    .setClientSecrets(clientId, clientSecret)
-                    .build()
-                    .setRefreshToken(user.getRefreshToken());
+            if (thumbnailQueueItem == null) {
+                messagingTemplate.convertAndSend("/topic/thumbnail/error", "Нет активной миниатюры для пользователя");
+                return null;
+            }
 
-            // Refresh access token
-            credential.refreshToken();
+            // Формируем запрос
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://youtubeanalytics.googleapis.com/v2/reports" +
+                            "?ids=channel==MINE" +
+                            "&startDate=" + startDate +
+                            "&endDate=2024-05-01" +
+                            "&metrics=views,impressions,averageViewDuration,comments,shares,likes,subscribersGained,averageViewPercentage,estimatedMinutesWatched" + // Добавляем метрики
+                            "&dimensions=video" +
+                            "&filters=video==" + extractVideoIdFromUrl(thumbnailQueueItem.getVideoUrl())))
+                    .header("Authorization", "Bearer " + refreshAccessToken(user.getRefreshToken()))
+                    .GET()
+                    .build();
 
-            return new YouTubeAnalytics.Builder(
-                    credential.getTransport(),
-                    credential.getJsonFactory(),
-                    credential
-            ).setApplicationName(applicationName).build();
-        } catch (IOException | GeneralSecurityException e) {
-            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Error building YouTube Analytics service: " + e.getMessage());
-        } catch (Exception e) {
-            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Unexpected error: " + e.getMessage());
+            // Отправляем запрос и получаем ответ
+            HttpClient client = HttpClient.newHttpClient();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            // Обрабатываем ответ
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode responseJson = mapper.readTree(response.body());
+
+            // Получаем данные из ответа
+            JsonNode rows = responseJson.path("rows");
+            if (rows.isEmpty()) {
+                messagingTemplate.convertAndSend("/topic/thumbnail/error", "Нет данных по видео");
+                return null;
+            }
+
+            JsonNode row = rows.get(0);
+
+            // Получаем значения метрик
+            Integer views = toInt(row.path(0)); // Количество просмотров
+            Integer impressions = toInt(row.path(1)); // Количество показов
+            Double averageViewDuration = toDouble(row.path(2)); // Средняя продолжительность просмотра
+            Integer comments = toInt(row.path(3)); // Количество комментариев
+            Integer shares = toInt(row.path(4)); // Количество расшариваний
+            Integer likes = toInt(row.path(5)); // Количество лайков
+            Integer subscribersGained = toInt(row.path(6)); // Количество подписчиков
+            Double averageViewPercentage = toDouble(row.path(7)); // Средний процент просмотра
+            Long totalWatchTime = toLong(row.path(8)); // Общее время просмотра (в минутах)
+
+            // Рассчитываем CTR (Click-Through Rate), если нужно
+            Double ctr = calculateCTR(impressions, views); // Здесь ты можешь использовать формулу CTR, если необходимо
+
+            // Создаем объект ThumbnailStats и заполняем поля
+
+            ThumbnailStats stats = thumbnailQueueItem.getImageOption().getThumbnailStats();
+            stats.setViews(views);
+            stats.setCtr(ctr);
+            stats.setImpressions(impressions);
+            stats.setAverageViewDuration(averageViewDuration);
+            stats.setComments(comments);
+            stats.setShares(shares);
+            stats.setLikes(likes);
+            stats.setSubscribersGained(subscribersGained);
+            stats.setAverageViewPercentage(averageViewPercentage);
+            stats.setTotalWatchTime(totalWatchTime);
+
+            // Возвращаем статистику
+            return stats;
+        } catch (IOException e) {
+            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Ошибка при получении данных YouTube Analytics: " + e.getMessage());
+            log.error("error ioexc:"+e.getMessage());
+        } catch (InterruptedException e) {
+            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Ошибка при получении данных YouTube Analytics: " + e.getMessage());
+            log.error("error inter:"+e.getMessage());
         }
         return null;
     }
 
-    public ThumbnailStats getStats(UserData user, LocalDate startDate, ThumbnailQueueItem thumbnailQueueItem) {
+    // Формула для вычисления CTR (Click-Through Rate)
+    private Double calculateCTR(Integer impressions, Integer views) {
+        if (impressions == null || impressions == 0 || views == null || views == 0) {
+            return 0.0; // Если нет данных, возвращаем 0%
+        }
+        return (double) views / impressions * 100; // CTR = (views / impressions) * 100
+    }
+
+    public String refreshAccessToken(String refreshToken) {
         try {
-            if (thumbnailQueueItem == null) {
-                messagingTemplate.convertAndSend("/topic/thumbnail/error", "No active thumbnail for the user");
+            log.info("entering to refresh token method");
+            String requestBody = "client_id=" + clientId
+                    + "&client_secret=" + clientSecret
+                    + "&refresh_token=" + URLEncoder.encode(refreshToken, StandardCharsets.UTF_8)
+                    + "&grant_type=refresh_token";
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://oauth2.googleapis.com/token"))
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                    .build();
+
+            HttpClient client = HttpClient.newHttpClient();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            log.info("response is received:"+ response.body());
+
+            // Используем Jackson для разбора JSON-ответа
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode jsonNode = mapper.readTree(response.body());
+
+            if (jsonNode.has("access_token")) {
+                return jsonNode.get("access_token").asText();
+            } else {
+                log.error("Ошибка получения access token: " + response.body());
                 return null;
             }
-
-            String videoId = extractVideoIdFromUrl(thumbnailQueueItem.getVideoUrl());
-
-            YouTubeAnalytics analytics = buildAnalyticsServiceFromUser(user);
-            if (analytics == null) {
-                messagingTemplate.convertAndSend("/topic/thumbnail/error", "Failed to build YouTube Analytics service.");
-                return null;
-            }
-
-            ResultTable analyticsResponse = analytics.reports()
-                    .query("channel==MINE", startDate.toString(), LocalDate.now().toString(),
-                            "views,comments,likes,subscribersGained,shares,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,impressions,impressionsCtr")
-                    .setFilters("video==" + videoId)
-                    .execute();
-
-            if (analyticsResponse.getRows() == null || analyticsResponse.getRows().isEmpty()) {
-                messagingTemplate.convertAndSend("/topic/thumbnail/error", "No data for this video: " + videoId);
-                return null;
-            }
-
-            List<Object> data = analyticsResponse.getRows().get(0);
-
-            ThumbnailStats stats = new ThumbnailStats();
-            stats.setImageOption(mapper.thumbnailDataToImageOption(thumbnailQueueItem));
-            stats.setViews(toInt(data.get(0)));
-            stats.setComments(toInt(data.get(1)));
-            stats.setLikes(toInt(data.get(2)));
-            stats.setSubscribersGained(toInt(data.get(3)));
-            stats.setShares(toInt(data.get(4)));
-            stats.setTotalWatchTime(Long.valueOf(toInt(data.get(5)))); // cast to int or long depending on your entity
-            stats.setAverageViewDuration(toDouble(data.get(6)));
-            stats.setAverageViewPercentage(toDouble(data.get(7)));
-            stats.setImpressions(toInt(data.get(8)));
-            stats.setCtr(toDouble(data.get(9)));
-
-            long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(startDate, LocalDate.now());
-            stats.setAdvCtr(daysBetween > 0 ? (double) stats.getTotalWatchTime() / daysBetween : 0.0);
-
-            return stats;
         } catch (IOException e) {
-            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Error fetching YouTube Analytics data: " + e.getMessage());
+            log.error("IOException:" + e.getMessage());
+        } catch (InterruptedException e) {
+            log.error("InterruptedException:" + e.getMessage());
         }
         return null;
+    }
+    public ThumbnailStats calculateStatsDifference(ThumbnailStats later, ThumbnailStats earlier) {
+        ThumbnailStats diff = new ThumbnailStats();
+        diff.setViews(safeSubtract(later.getViews(), earlier.getViews()));
+        diff.setImpressions(safeSubtract(later.getImpressions(), earlier.getImpressions()));
+        diff.setAverageViewDuration(later.getAverageViewDuration()); // average, keep latest or calculate weighted average
+        diff.setComments(safeSubtract(later.getComments(), earlier.getComments()));
+        diff.setShares(safeSubtract(later.getShares(), earlier.getShares()));
+        diff.setLikes(safeSubtract(later.getLikes(), earlier.getLikes()));
+        diff.setSubscribersGained(safeSubtract(later.getSubscribersGained(), earlier.getSubscribersGained()));
+        diff.setAverageViewPercentage(later.getAverageViewPercentage()); // average, keep latest or calculate weighted average
+        diff.setTotalWatchTime(safeSubtractLong(later.getTotalWatchTime(), earlier.getTotalWatchTime()));
+        diff.setCtr(calculateCTR(diff.getImpressions(), diff.getViews()));
+        return diff;
+    }
+
+    private Integer safeSubtract(Integer a, Integer b) {
+        if (a == null || b == null) return null;
+        return Math.max(0, a - b);
+    }
+
+    private Long safeSubtractLong(Long a, Long b) {
+        if (a == null || b == null) return null;
+        return Math.max(0L, a - b);
     }
 
 
@@ -123,13 +199,17 @@ public class YouTubeAnalyticsService {
         return url;
     }
 
-    private Integer toInt(Object obj) {
-        if (obj == null) return null;
-        return ((Number) obj).intValue();
+    private Integer toInt(JsonNode node) {
+        if (node == null || node.isNull()) return null;
+        return node.asInt();
     }
 
-    private Double toDouble(Object obj) {
-        if (obj == null) return null;
-        return ((Number) obj).doubleValue();
+    private Double toDouble(JsonNode node) {
+        if (node == null || node.isNull()) return null;
+        return node.asDouble();
+    }
+    private Long toLong(JsonNode node) {
+        if (node.isNull()) return null;
+        return node.asLong();
     }
 }

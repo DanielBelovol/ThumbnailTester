@@ -236,19 +236,19 @@ public class ThumbnailTestService {
 
         // Fetch and save statistics
         log.info("fetch and save stats started");
-        ThumbnailStats stats = youTubeAnalyticsService.getStats(thumbnailData.getUser(), LocalDate.now(), thumbnailQueueItem);
-        if (stats != null) {
-            log.info("stats != null");
-            imageOption.setThumbnailStats(stats);
-            stats.setImageOption(imageOption);
-            imageOption.setThumbnail(thumbnailData);
-
-            thumbnailService.save(thumbnailData);
-            log.info("thumbnail saved");
-
-            // Send intermediate result via WebSocket
-            messagingTemplate.convertAndSend("/topic/thumbnail/progress", imageOption);
-        }
+//        ThumbnailStats stats = youTubeAnalyticsService.getAnalyticsViaHttp(thumbnailData.getUser(), LocalDate.now(), thumbnailQueueItem);
+//        if (stats != null) {
+//            log.info("stats != null");
+////            imageOption.setThumbnailStats(stats);
+//            stats.setImageOption(imageOption);
+//            imageOption.setThumbnail(thumbnailData);
+//
+//            thumbnailService.save(thumbnailData);
+//            log.info("thumbnail saved");
+//
+//            // Send intermediate result via WebSocket
+//            messagingTemplate.convertAndSend("/topic/thumbnail/progress", imageOption);
+//        }
     } catch (InterruptedException | MalformedURLException e) {
         messagingTemplate.convertAndSend("/topic/thumbnail/error", "InternalServerError: " + e.getMessage());
         log.error("Error in processSingleTestSync", e);

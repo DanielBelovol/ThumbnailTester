@@ -3,8 +3,7 @@ package com.example.ThumbnailTester.services;
 import com.example.ThumbnailTester.data.thumbnail.ThumbnailData;
 import com.example.ThumbnailTester.data.user.UserData;
 import com.google.api.client.auth.oauth2.Credential;
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
-import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+
 import com.google.api.client.http.FileContent;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.youtube.YouTube;
@@ -12,6 +11,7 @@ import com.google.api.services.youtube.model.ThumbnailSetResponse;
 import com.google.api.services.youtube.model.Video;
 import com.google.api.services.youtube.model.VideoListResponse;
 import com.google.api.services.youtube.model.VideoSnippet;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -75,6 +75,23 @@ public class YouTubeService {
         } catch (IOException e) {
             messagingTemplate.convertAndSend("/topic/thumbnail/error", "Failed to upload thumbnail: " + e.getMessage());
         }
+    }
+
+    private YouTube buildYouTubeService(UserData user) throws Exception {
+        UserCredentials userCredentials = UserCredentials.newBuilder()
+                .setClientId(clientId)
+                .setClientSecret(clientSecret)
+                .setRefreshToken(user.getRefreshToken())
+                .build();
+
+        HttpCredentialsAdapter credentialsAdapter = new HttpCredentialsAdapter(userCredentials);
+
+        return new YouTube.Builder(
+                GoogleNetHttpTransport.newTrustedTransport(),
+                JacksonFactory.getDefaultInstance(),
+                credentialsAdapter)
+                .setApplicationName(applicationName)
+                .build();
     }
 
 

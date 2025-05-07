@@ -1,174 +1,186 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-	<parent>
-		<groupId>org.springframework.boot</groupId>
-		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.4.4</version>
-		<relativePath/> <!-- lookup parent from repository -->
-	</parent>
-	<groupId>com.example</groupId>
-	<artifactId>ThumbnailTester</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-	<name>ThumbnailTester</name>
-	<description>Demo project for Spring Boot</description>
-	<url/>
-	<licenses>
-		<license/>
-	</licenses>
-	<developers>
-		<developer/>
-	</developers>
-	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
-	</scm>
-	<properties>
-		<java.version>17</java.version>
-		<project.youtube.version>v3-rev182-1.22.0</project.youtube.version>
-		<project.youtube.analytics.version>v1-rev63-1.22.0</project.youtube.analytics.version>
-		<project.youtube.reporting.version>v1-rev10-1.22.0</project.youtube.reporting.version>
-		<project.http.version>1.20.0</project.http.version>
-		<project.oauth.version>1.20.0</project.oauth.version>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-	</properties>
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.4.4</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
 
-	<repositories>
-		<repository>
-			<id>google-api-services</id>
-			<url>http://google-api-client-libraries.appspot.com/mavenrepo</url>
-		</repository>
-	</repositories>
+    <groupId>com.example</groupId>
+    <artifactId>ThumbnailTester</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>ThumbnailTester</name>
+    <description>Demo project for Spring Boot</description>
 
-	<dependencies>
-		<!-- YouTube Data V3 support -->
-		<dependency>
-			<groupId>com.google.apis</groupId>
-			<artifactId>google-api-services-youtube</artifactId>
-			<version>${project.youtube.version}</version>
-		</dependency>
+    <properties>
+        <java.version>17</java.version>
 
-		<!-- Required for any code that makes calls to the YouTube Analytics API -->
-		<dependency>
-			<groupId>com.google.apis</groupId>
-			<artifactId>google-api-services-youtubeAnalytics</artifactId>
-			<version>${project.youtube.analytics.version}</version>
-		</dependency>
+        <!-- Google API versions -->
+        <project.youtube.version>v3-rev182-1.22.0</project.youtube.version>
+        <project.youtube.analytics.version>v1-rev63-1.22.0</project.youtube.analytics.version>
+        <project.youtube.reporting.version>v1-rev10-1.22.0</project.youtube.reporting.version>
 
-		<!-- Required for any code that makes calls to the YouTube Reporting API -->
-		<dependency>
-			<groupId>com.google.apis</groupId>
-			<artifactId>google-api-services-youtubereporting</artifactId>
-			<version>${project.youtube.reporting.version}</version>
-		</dependency>
+        <!-- Google HTTP and OAuth client versions -->
+        <project.http.version>1.34.0</project.http.version>
+        <project.oauth.version>1.34.0</project.oauth.version>
 
-		<!-- This dependency is only used for the Topics API sample, which requires the Jackson JSON parser -->
-		<dependency>
-			<groupId>org.codehaus.jackson</groupId>
-			<artifactId>jackson-mapper-asl</artifactId>
-			<version>1.9.4</version>
-		</dependency>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
 
-		<dependency>
-			<groupId>com.google.http-client</groupId>
-			<artifactId>google-http-client-jackson2</artifactId>
-			<version>${project.http.version}</version>
-		</dependency>
+    <repositories>
+        <repository>
+            <id>google-api-services</id>
+            <url>https://google-api-client-libraries.appspot.com/mavenrepo</url>
+        </repository>
+    </repositories>
 
-		<dependency>
-			<groupId>com.google.oauth-client</groupId>
-			<artifactId>google-oauth-client-jetty</artifactId>
-			<version>${project.oauth.version}</version>
-		</dependency>
+    <dependencies>
+        <!-- Spring Boot core dependencies -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
 
-		<dependency>
-			<groupId>com.google.collections</groupId>
-			<artifactId>google-collections</artifactId>
-			<version>1.0</version>
-		</dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <version>3.4.4</version>
+        </dependency>
 
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter</artifactId>
-		</dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+            <version>3.4.4</version>
+        </dependency>
 
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-data-jpa -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa</artifactId>
-			<version>3.3.4</version>
-		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.postgresql/postgresql -->
-		<dependency>
-			<groupId>org.postgresql</groupId>
-			<artifactId>postgresql</artifactId>
-			<version>42.5.6</version>
-		</dependency>
-		<dependency>
-			<groupId>org.projectlombok</groupId>
-			<artifactId>lombok</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>com.squareup.okhttp3</groupId>
-			<artifactId>okhttp</artifactId>
-			<version>4.9.0</version>
-		</dependency>
-		<!-- https://mvnrepository.com/artifact/com.google.code.gson/gson -->
-		<dependency>
-			<groupId>com.google.code.gson</groupId>
-			<artifactId>gson</artifactId>
-			<version>2.12.1</version>
-		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-web -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-web</artifactId>
-			<version>3.4.4</version>
-		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-websocket -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-websocket</artifactId>
-			<version>3.4.4</version>
-		</dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+            <version>3.3.4</version>
+        </dependency>
 
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
 
-		<!-- Google OAuth Client Library for authentication -->
-		<dependency>
-			<groupId>com.google.oauth-client</groupId>
-			<artifactId>google-oauth-client</artifactId>
-			<version>1.34.0</version>
-		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.flywaydb/flyway-core -->
-		<dependency>
-			<groupId>org.flywaydb</groupId>
-			<artifactId>flyway-core</artifactId>
-			<version>9.4.0</version>
-		</dependency>
+        <!-- PostgreSQL driver -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.5.6</version>
+        </dependency>
 
-		<!-- Google HTTP Client Library for making HTTP requests -->
-		<dependency>
-			<groupId>com.google.http-client</groupId>
-			<artifactId>google-http-client-gson</artifactId>
-			<version>1.34.0</version>
-		</dependency>
-	</dependencies>
+        <!-- Lombok for boilerplate code reduction -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
 
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
-		</plugins>
-	</build>
+        <!-- OkHttp client -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>4.9.0</version>
+        </dependency>
 
+        <!-- Gson JSON parser -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.12.1</version>
+        </dependency>
+
+        <!-- Jackson JSON parser (used by Google API client) -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.15.2</version>
+        </dependency>
+
+        <!-- Google YouTube Data API v3 -->
+        <dependency>
+            <groupId>com.google.apis</groupId>
+            <artifactId>google-api-services-youtube</artifactId>
+            <version>${project.youtube.version}</version>
+        </dependency>
+
+        <!-- Google YouTube Analytics API -->
+        <dependency>
+            <groupId>com.google.apis</groupId>
+            <artifactId>google-api-services-youtubeanalytics</artifactId>
+            <version>${project.youtube.analytics.version}</version>
+        </dependency>
+
+        <!-- Google YouTube Reporting API -->
+        <dependency>
+            <groupId>com.google.apis</groupId>
+            <artifactId>google-api-services-youtubereporting</artifactId>
+            <version>${project.youtube.reporting.version}</version>
+        </dependency>
+
+        <!-- Google API Client Library -->
+        <dependency>
+            <groupId>com.google.api-client</groupId>
+            <artifactId>google-api-client</artifactId>
+            <version>${project.http.version}</version>
+        </dependency>
+
+        <!-- Google HTTP Client with Jackson2 support -->
+        <dependency>
+            <groupId>com.google.http-client</groupId>
+            <artifactId>google-http-client-jackson2</artifactId>
+            <version>${project.http.version}</version>
+        </dependency>
+
+        <!-- Google HTTP Client with Gson support -->
+        <dependency>
+            <groupId>com.google.http-client</groupId>
+            <artifactId>google-http-client-gson</artifactId>
+            <version>${project.http.version}</version>
+        </dependency>
+
+        <!-- Google OAuth Client -->
+        <dependency>
+            <groupId>com.google.oauth-client</groupId>
+            <artifactId>google-oauth-client</artifactId>
+            <version>${project.oauth.version}</version>
+        </dependency>
+
+        <!-- Google OAuth Client Jetty (for local server flow if needed) -->
+        <dependency>
+            <groupId>com.google.oauth-client</groupId>
+            <artifactId>google-oauth-client-jetty</artifactId>
+            <version>${project.oauth.version}</version>
+        </dependency>
+
+        <!-- Google Auth Library (modern OAuth2 credentials support) -->
+        <dependency>
+            <groupId>com.google.auth</groupId>
+            <artifactId>google-auth-library-oauth2-http</artifactId>
+            <version>1.21.0</version>
+        </dependency>
+
+        <!-- Google Collections (optional, legacy) -->
+        <dependency>
+            <groupId>com.google.collections</groupId>
+            <artifactId>google-collections</artifactId>
+            <version>1.0</version>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 </project>
