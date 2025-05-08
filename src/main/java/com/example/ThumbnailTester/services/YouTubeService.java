@@ -45,41 +45,41 @@ public class YouTubeService {
         this.messagingTemplate = messagingTemplate;
     }
 
-    public void uploadThumbnail(ThumbnailData thumbnailData, File thumbnailFile) {
-        try {
-            log.info("Uploading thumbnail started");
-            Credential credential = buildCredentialFromRefreshToken(thumbnailData.getUser());
-            log.info("Refresh token: " + credential.getRefreshToken());
-            YouTube youTube = new YouTube.Builder(
-                    credential.getTransport(),
-                    credential.getJsonFactory(),
-                    credential)
-                    .setApplicationName(applicationName)
-                    .build();
-
-            // Prepare the thumbnail file for upload
-            FileContent mediaContent = new FileContent("image/jpeg", thumbnailFile);
-            log.info("file content: " + mediaContent);
-
-            // Execute the thumbnail upload
-            YouTube.Thumbnails.Set thumbnailSet = youTube.thumbnails()
-                    .set(getVideoIdFromUrl(thumbnailData.getVideoUrl()), mediaContent);
-            log.info("thumbnail set: " + thumbnailSet);
-
-            ThumbnailSetResponse response = thumbnailSet.execute();
-            log.info("thumbnail response: " + response);
-
-            // Check if the response contains the expected data (successful upload)
-            if (response != null && response.getItems() != null && !response.getItems().isEmpty()) {
-                messagingTemplate.convertAndSend("/topic/thumbnail/success", "Thumbnail uploaded successfully.");
-                supaBaseImageService.deleteFileWithPath(thumbnailFile);
-            } else {
-                messagingTemplate.convertAndSend("/topic/thumbnail/error", "Thumbnail upload failed: No response items found.");
-            }
-        } catch (IOException e) {
-            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Failed to upload thumbnail: " + e.getMessage());
+    public void uploadThumbnail(ThumbnailData thumbnailData, File thumbnailFile) throws IOException {
+        log.info("Uploading thumbnail started");
+        Credential credential = buildCredentialFromRefreshToken(thumbnailData.getUser());
+        if (credential == null) {
+            throw new IOException("Failed to build credentials for user");
         }
+        log.info("Refresh token: " + credential.getRefreshToken());
+        YouTube youTube = new YouTube.Builder(
+                credential.getTransport(),
+                credential.getJsonFactory(),
+                credential)
+                .setApplicationName(applicationName)
+                .build();
+
+        // Prepare the thumbnail file for upload
+        FileContent mediaContent = new FileContent("image/jpeg", thumbnailFile);
+        log.info("file content: " + mediaContent);
+
+        // Execute the thumbnail upload
+        YouTube.Thumbnails.Set thumbnailSet = youTube.thumbnails()
+                .set(getVideoIdFromUrl(thumbnailData.getVideoUrl()), mediaContent);
+        log.info("thumbnail set: " + thumbnailSet);
+
+        ThumbnailSetResponse response = thumbnailSet.execute();
+        log.info("thumbnail response: " + response);
+
+        // Check if the response contains the expected data (successful upload)
+        if (response == null || response.getItems() == null || response.getItems().isEmpty()) {
+            throw new IOException("Thumbnail upload failed: No response items found.");
+        }
+
+        messagingTemplate.convertAndSend("/topic/thumbnail/success", "Thumbnail uploaded successfully.");
+        supaBaseImageService.deleteFileWithPath(thumbnailFile);
     }
+
 
     private YouTube buildYouTubeService(UserData user) throws Exception {
         UserCredentials userCredentials = UserCredentials.newBuilder()
@@ -242,4 +242,46 @@ public class YouTubeService {
             return null;  // Or you can return an empty string or another value to signify an error
         }
     }
+    public String getVideoTitle(UserData user, String videoId) {
+        try {
+            Credential credential = buildCredentialFromRefreshToken(user);
+            if (credential == null) {
+                log.error("Credential is null, cannot get video title");
+                messagingTemplate.convertAndSend("/topic/thumbnail/error", "Invalid credentials for getting video title.");
+                return null;
+            }
+
+            YouTube youtube = new YouTube.Builder(
+                    credential.getTransport(),
+                    credential.getJsonFactory(),
+                    credential)
+                    .setApplicationName(applicationName)
+                    .build();
+
+            YouTube.Videos.List videoRequest = youtube.videos().list("snippet");
+            videoRequest.setId(videoId);
+            VideoListResponse response = videoRequest.execute();
+
+            if (response.getItems().isEmpty()) {
+                String errMsg = "Video with id " + videoId + " not found.";
+                log.error(errMsg);
+                messagingTemplate.convertAndSend("/topic/thumbnail/error", errMsg);
+                return null;
+            }
+
+            Video video = response.getItems().get(0);
+            VideoSnippet snippet = video.getSnippet();
+
+            return snippet.getTitle();
+
+        } catch (IOException e) {
+            log.error("IOException while getting video title", e);
+            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Error getting video title: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error while getting video title", e);
+            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Unexpected error getting video title: " + e.getMessage());
+        }
+        return null;
+    }
+
 }
