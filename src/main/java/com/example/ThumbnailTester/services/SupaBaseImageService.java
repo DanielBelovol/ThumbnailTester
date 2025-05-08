@@ -4,9 +4,11 @@ import java.io.File; import java.io.FileOutputStream; import java.io.InputStream
 @Service public class SupaBaseImageService { private static final Logger log = LoggerFactory.getLogger(SupaBaseImageService.class);
     private static final String THUMBNAILS_DIR_NAME = "thumbnails";
     private static final int BUFFER_SIZE = 16 * 1024; // 16 KB
+    private static final int MAX_DOWNLOAD_ATTEMPTS = 3;
 
     /**
      * Downloads a file from the given URL and saves it to a unique file in the temp thumbnails directory.
+     * Retries download up to MAX_DOWNLOAD_ATTEMPTS times if incomplete or error occurs.
      *
      * @param url the URL to download from
      * @return the downloaded File or null if failed
@@ -24,18 +26,35 @@ import java.io.File; import java.io.FileOutputStream; import java.io.InputStream
         }
 
         File file = new File(directory, fileName);
-        log.info("Created file path: {}", file.getAbsolutePath());
 
-        try (InputStream in = url.openStream(); OutputStream out = new FileOutputStream(file)) {
-            byte[] buffer = new byte[BUFFER_SIZE];
-            int bytesRead;
-            while ((bytesRead = in.read(buffer)) != -1) {
-                out.write(buffer, 0, bytesRead);
+        for (int attempt = 1; attempt <= MAX_DOWNLOAD_ATTEMPTS; attempt++) {
+            log.info("Download attempt {}/{} for file: {}", attempt, MAX_DOWNLOAD_ATTEMPTS, file.getAbsolutePath());
+            try (InputStream in = url.openStream(); OutputStream out = new FileOutputStream(file)) {
+                byte[] buffer = new byte[BUFFER_SIZE];
+                int bytesRead;
+                while ((bytesRead = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, bytesRead);
+                }
+                out.flush();
+
+                // Check if file size is reasonable (non-zero)
+                if (file.length() > 0) {
+                    log.info("Download succeeded on attempt {} with file size: {} bytes", attempt, file.length());
+                    return file;
+                } else {
+                    log.warn("Downloaded file size is zero, retrying...");
+                }
+            } catch (Exception e) {
+                log.error("Error downloading file from URL: {} on attempt {}", url, attempt, e);
             }
-            return file;
-        } catch (Exception e) {
-            log.error("Error downloading file from URL: {}", url, e);
+
+            // Delete incomplete or zero-length file before retrying
+            if (file.exists() && !file.delete()) {
+                log.warn("Failed to delete incomplete file: {}", file.getAbsolutePath());
+            }
         }
+
+        log.error("Failed to download file after {} attempts: {}", MAX_DOWNLOAD_ATTEMPTS, file.getAbsolutePath());
         return null;
     }
 
