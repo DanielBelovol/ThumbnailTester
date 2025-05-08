@@ -80,25 +80,6 @@ public class YouTubeService {
         supaBaseImageService.deleteFileWithPath(thumbnailFile);
     }
 
-
-    private YouTube buildYouTubeService(UserData user) throws Exception {
-        UserCredentials userCredentials = UserCredentials.newBuilder()
-                .setClientId(clientId)
-                .setClientSecret(clientSecret)
-                .setRefreshToken(user.getRefreshToken())
-                .build();
-
-        HttpCredentialsAdapter credentialsAdapter = new HttpCredentialsAdapter(userCredentials);
-
-        return new YouTube.Builder(
-                GoogleNetHttpTransport.newTrustedTransport(),
-                JacksonFactory.getDefaultInstance(),
-                credentialsAdapter)
-                .setApplicationName(applicationName)
-                .build();
-    }
-
-
     public void updateVideoTitle(UserData user, String videoId, String newTitle) {
         try {
             log.info("Updating video title. videoId={}, newTitle={}", videoId, newTitle);

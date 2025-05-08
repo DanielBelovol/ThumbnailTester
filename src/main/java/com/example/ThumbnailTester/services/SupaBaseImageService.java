@@ -10,13 +10,15 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 @Service
 public class SupaBaseImageService {
     private static final Logger log = LoggerFactory.getLogger(SupaBaseImageService.class);
     public File getFileFromPath(URL url){
         log.info("getFileFromPath started with url: " + url);
-        String fileName = getFileName(url);
+        String fileName = getUniqueFileName(url);
         File directory = new File(System.getProperty("java.io.tmpdir"), "thumbnails");
 
         if (!directory.exists()) {
@@ -39,6 +41,7 @@ public class SupaBaseImageService {
         }
         return null;
     }
+
 
     public String getFileName(URL url) {
         log.info("get fileName started with url: " + url);
@@ -66,6 +69,39 @@ public class SupaBaseImageService {
             }
         } catch (Exception e) {
             log.error("Error deleting file: " + file.getAbsolutePath(), e);
+        }
+    }
+    public String getUniqueFileName(URL url) {
+        String originalFileName = getFileName(url);
+        String extension = "";
+
+        int dotIndex = originalFileName.lastIndexOf('.');
+        if (dotIndex > 0) {
+            extension = originalFileName.substring(dotIndex);
+            originalFileName = originalFileName.substring(0, dotIndex);
+        }
+
+        // generation hash for unique name
+        String urlString = url.toString();
+        String hash = md5Hex(urlString);
+
+        // creating unique name: originalName + "_" + hash + extension
+        return originalFileName + "_" + hash + extension;
+    }
+
+    private String md5Hex(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] digest = md.digest(input.getBytes());
+            StringBuilder sb = new StringBuilder();
+            for (byte b : digest) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            log.error("MD5 algorithm not found", e);
+            // fallback
+            return input.replaceAll("[^a-zA-Z0-9]", "");
         }
     }
 }
