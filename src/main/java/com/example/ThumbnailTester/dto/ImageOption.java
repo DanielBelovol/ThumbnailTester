@@ -2,6 +2,7 @@ package com.example.ThumbnailTester.dto;
 
 import com.example.ThumbnailTester.data.thumbnail.ThumbnailData;
 import com.example.ThumbnailTester.data.thumbnail.ThumbnailStats;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
@@ -28,11 +29,12 @@ public class ImageOption {
     @Column(name = "is_winner")
     private boolean isWinner;
 
-    @OneToOne(mappedBy = "imageOption", cascade = CascadeType.ALL)
-    @JsonIgnore
+    @OneToOne(mappedBy = "imageOption", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private ThumbnailStats thumbnailStats;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "thumbnail_id")
+    @JsonBackReference
     private ThumbnailData thumbnail;
 }

@@ -8,10 +8,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
+@Table(name = "thumbnail_stats")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "thumbnail_stats")
 public class ThumbnailStats {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -19,6 +19,7 @@ public class ThumbnailStats {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "thumbnail_id", nullable = false)
+    @JsonBackReference
     private ImageOption imageOption;
 
     private Integer views;

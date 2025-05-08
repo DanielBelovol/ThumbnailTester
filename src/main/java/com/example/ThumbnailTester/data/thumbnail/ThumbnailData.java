@@ -2,6 +2,7 @@ package com.example.ThumbnailTester.data.thumbnail;
 
 import com.example.ThumbnailTester.data.user.UserData;
 import com.example.ThumbnailTester.dto.ImageOption;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -20,6 +21,7 @@ public class ThumbnailData {
     private Long id;
 
     @OneToMany(mappedBy = "thumbnail", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<ImageOption> imageOptions;
 
     @Column(nullable = false, name = "video_url")

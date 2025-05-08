@@ -226,8 +226,24 @@ public class ThumbnailTestService {
             ThumbnailStats oldStats = imageOption.getThumbnailStats();
             if (oldStats == null) {
                 oldStats = new ThumbnailStats();
+                // Инициализация полей нулями
+                oldStats.setViews(0);
+                oldStats.setCtr(0.0);
+                oldStats.setImpressions(0);
+                oldStats.setAverageViewDuration(0.0);
+                oldStats.setAdvCtr(0.0);
+                oldStats.setComments(0);
+                oldStats.setShares(0);
+                oldStats.setLikes(0);
+                oldStats.setSubscribersGained(0);
+                oldStats.setAverageViewPercentage(0.0);
+                oldStats.setTotalWatchTime(0L);
+
                 imageOption.setThumbnailStats(oldStats);
+                oldStats.setImageOption(imageOption);
             }
+            thumbnailService.save(thumbnailData);
+
 
             // Начальная дата для сбора статистики (например, сегодня)
             LocalDate startDate = LocalDate.now();
@@ -248,7 +264,8 @@ public class ThumbnailTestService {
 
             // Обновляем заголовок видео, если нужно
             if (testConfType == TestConfType.THUMBNAILTEXT || testConfType == TestConfType.TEXT) {
-                youTubeService.updateVideoTitle(thumbnailData.getUser(), thumbnailData.getVideoUrl(), text);
+                youTubeService.updateVideoTitle(thumbnailData.getUser(), youTubeService.getVideoIdFromUrl(thumbnailData.getVideoUrl()), text);
+                Thread.sleep(10000);
                 log.info("update ended");
             }
 
@@ -273,6 +290,8 @@ public class ThumbnailTestService {
                 messagingTemplate.convertAndSend("/topic/thumbnail/progress", imageOption);
             } else {
                 log.warn("No stats received for thumbnail test");
+                // Если статистика не получена, отправляем объект с нулями
+                messagingTemplate.convertAndSend("/topic/thumbnail/progress", imageOption);
             }
         } catch (InterruptedException | MalformedURLException e) {
             messagingTemplate.convertAndSend("/topic/thumbnail/error", "InternalServerError: " + e.getMessage());
@@ -293,8 +312,23 @@ public class ThumbnailTestService {
 
         for (ImageOption option : options) {
             ThumbnailStats stats = option.getThumbnailStats();
-            if (stats == null) continue;
+            if (stats == null) {
+                stats = new ThumbnailStats();
+                stats.setViews(0);
+                stats.setCtr(0.0);
+                stats.setImpressions(0);
+                stats.setAverageViewDuration(0.0);
+                stats.setAdvCtr(0.0);
+                stats.setComments(0);
+                stats.setShares(0);
+                stats.setLikes(0);
+                stats.setSubscribersGained(0);
+                stats.setAverageViewPercentage(0.0);
+                stats.setTotalWatchTime(0L);
+            }
+            thumbnailService.save(thumbnailData);
 
+            // теперь используйте stats дальше
             double value = switch (criterion) {
                 case VIEWS -> stats.getViews();
                 case AVD -> stats.getAverageViewDuration();

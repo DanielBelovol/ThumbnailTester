@@ -101,8 +101,13 @@ public class YouTubeService {
 
     public void updateVideoTitle(UserData user, String videoId, String newTitle) {
         try {
-            log.info("update video title");
+            log.info("Updating video title. videoId={}, newTitle={}", videoId, newTitle);
             Credential credential = buildCredentialFromRefreshToken(user);
+            if (credential == null) {
+                log.error("Credential is null, cannot update video title");
+                messagingTemplate.convertAndSend("/topic/thumbnail/error", "Invalid credentials for updating video title.");
+                return;
+            }
 
             YouTube youtube = new YouTube.Builder(
                     credential.getTransport(),
@@ -111,32 +116,45 @@ public class YouTubeService {
                     .setApplicationName(applicationName)
                     .build();
 
-            // Get video details
+            // Получаем детали видео
             YouTube.Videos.List videoRequest = youtube.videos().list("snippet");
             videoRequest.setId(videoId);
             VideoListResponse response = videoRequest.execute();
 
-            if (!response.getItems().isEmpty()) {
-                // get video
-                Video video = response.getItems().get(0);
-                VideoSnippet snippet = video.getSnippet();
-
-                // edit title
-                snippet.setTitle(newTitle);
-
-                // update metadata
-                video.setSnippet(snippet);
-
-                // make request for update
-                YouTube.Videos.Update videoUpdate = youtube.videos().update("snippet", video);
-                videoUpdate.execute();
-            } else {
-                messagingTemplate.convertAndSend("/topic/thumbnail/error", "Video with id " + videoId + " not found.");
+            if (response.getItems().isEmpty()) {
+                String errMsg = "Video with id " + videoId + " not found.";
+                log.error(errMsg);
+                messagingTemplate.convertAndSend("/topic/thumbnail/error", errMsg);
+                return;
             }
+
+            Video video = response.getItems().get(0);
+            VideoSnippet snippet = video.getSnippet();
+
+            // Логируем текущий заголовок
+            log.info("Current video title: {}", snippet.getTitle());
+
+            // Обновляем заголовок
+            snippet.setTitle(newTitle);
+            video.setSnippet(snippet);
+
+            // Выполняем обновление
+            YouTube.Videos.Update videoUpdate = youtube.videos().update("snippet", video);
+            Video updatedVideo = videoUpdate.execute();
+
+            // Логируем результат
+            log.info("Video title updated successfully to: {}", updatedVideo.getSnippet().getTitle());
+            messagingTemplate.convertAndSend("/topic/thumbnail/success", "Video title updated successfully.");
+
         } catch (IOException e) {
+            log.error("IOException while updating video title", e);
             messagingTemplate.convertAndSend("/topic/thumbnail/error", "Error updating video title: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error while updating video title", e);
+            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Unexpected error updating video title: " + e.getMessage());
         }
     }
+
 
     public String getVideoOwnerChannelId(UserData user, String videoId) {
         try {
@@ -195,16 +213,25 @@ public class YouTubeService {
                     .setClientSecrets(clientId, clientSecret)
                     .build()
                     .setRefreshToken(user.getRefreshToken());
-            // Refresh the token to ensure it's valid
-            credential.refreshToken();
+
+            // Попытка обновить токен
+            boolean refreshed = credential.refreshToken();
+            if (refreshed) {
+                log.info("Successfully refreshed access token for user with GoogleId: {}", user.getGoogleId());
+                log.debug("New access token: {}", credential.getAccessToken());
+            } else {
+                log.warn("Failed to refresh access token for user with GoogleId: {}", user.getGoogleId());
+            }
 
             return credential;
 
         } catch (IOException | GeneralSecurityException e) {
+            log.error("Error building YouTube credential for user with GoogleId: {}", user.getGoogleId(), e);
             messagingTemplate.convertAndSend("/topic/thumbnail/error", "Error building YouTube service: " + e.getMessage());
         }
         return null;
     }
+
 
     public String getVideoIdFromUrl(String videoUrl) {
         if (videoUrl.contains("v=")) {
