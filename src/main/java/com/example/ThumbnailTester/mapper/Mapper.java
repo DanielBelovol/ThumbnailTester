@@ -1,44 +1,26 @@
 package com.example.ThumbnailTester.mapper;
-
-import com.example.ThumbnailTester.Request.ThumbnailRequest;
-import com.example.ThumbnailTester.Request.ThumbnailTestConfRequest;
-import com.example.ThumbnailTester.data.thumbnail.*;
-import com.example.ThumbnailTester.data.user.UserData;
-import com.example.ThumbnailTester.dto.ImageOption;
-import com.example.ThumbnailTester.dto.ThumbnailQueueItem;
-import com.example.ThumbnailTester.services.UserService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.List;
-
-@Service
-public class Mapper {
-    @Autowired
-    private UserService userService;
-    private static final Logger log = LoggerFactory.getLogger(Mapper.class);
-
+import com.example.ThumbnailTester.Request.ThumbnailRequest; import com.example.ThumbnailTester.Request.ThumbnailTestConfRequest; import com.example.ThumbnailTester.data.thumbnail.*; import com.example.ThumbnailTester.data.user.UserData; import com.example.ThumbnailTester.dto.ImageOption; import com.example.ThumbnailTester.dto.ThumbnailQueueItem; import com.example.ThumbnailTester.services.UserService; import org.slf4j.Logger; import org.slf4j.LoggerFactory; import org.springframework.beans.factory.annotation.Autowired; import org.springframework.stereotype.Service;
+import java.util.ArrayList; import java.util.List;
+@Service public class Mapper { @Autowired private UserService userService; private static final Logger log = LoggerFactory.getLogger(Mapper.class);
     public ThumbnailTestConf testConfRequestToDTO(ThumbnailTestConfRequest request) {
         log.info("Entering testConfRequestToDTO method.");
-        log.info("TestType: " + request.getTestType());
-        log.info("TestingType: " + request.getTestingType());
-        log.info("CriterionOfWinner: " + request.getCriterionOfWinner());
+        log.info("TestType: {}", request.getTestType());
+        log.info("TestingType: {}", request.getTestingType());
+        log.info("CriterionOfWinner: {}", request.getCriterionOfWinner());
 
         ThumbnailTestConf testConf = new ThumbnailTestConf();
 
         try {
             testConf.setTestType(TestConfType.valueOf(request.getTestType()));
         } catch (IllegalArgumentException e) {
-            log.error("Invalid TestConfType: " + request.getTestType(), e);// Или можно вернуть null или задать значение по умолчанию
+            log.error("Invalid TestConfType: {}", request.getTestType(), e);
+            // Optionally set default or return null
         }
 
         try {
             testConf.setTestingType(TestingType.valueOf(request.getTestingType()));
         } catch (IllegalArgumentException e) {
-            log.error("Invalid TestingType: " + request.getTestingType(), e);
+            log.error("Invalid TestingType: {}", request.getTestingType(), e);
         }
 
         testConf.setTestingByTimeMinutes(request.getTestingByTimeMinutes());
@@ -47,7 +29,7 @@ public class Mapper {
         try {
             testConf.setCriterionOfWinner(CriterionOfWinner.valueOf(request.getCriterionOfWinner()));
         } catch (IllegalArgumentException e) {
-            log.error("Invalid CriterionOfWinner: " + request.getCriterionOfWinner(), e);
+            log.error("Invalid CriterionOfWinner: {}", request.getCriterionOfWinner(), e);
             throw e;
         }
         log.info("Exiting testConfRequestToDTO method.");
@@ -58,7 +40,7 @@ public class Mapper {
         log.info("Entering thumbnailRequestToData method.");
 
         UserData userData = userService.getByGoogleId(thumbnailRequest.getUserDTO().getGoogleId());
-        if(userData==null){
+        if (userData == null) {
             userData = new UserData(
                     thumbnailRequest.getUserDTO().getGoogleId(),
                     thumbnailRequest.getUserDTO().getRefreshToken()
@@ -87,11 +69,10 @@ public class Mapper {
         return thumbnailData;
     }
 
-
-
     public ImageOption thumbnailDataToImageOption(ThumbnailQueueItem thumbnailQueueItem) {
         return thumbnailQueueItem.getImageOption();
     }
+
     public List<ImageOption> createImageOptions(List<String> fileUrls, List<String> texts, ThumbnailData thumbnailData, TestConfType type) {
         List<ImageOption> imageOptions = new ArrayList<>();
         if (thumbnailData == null) {
@@ -99,7 +80,9 @@ public class Mapper {
             return imageOptions;
         }
 
-        for (int i = 0; i < fileUrls.size(); i++) {
+        int maxIndex = Math.max(fileUrls != null ? fileUrls.size() : 0, texts != null ? texts.size() : 0);
+
+        for (int i = 0; i < maxIndex; i++) {
             ImageOption option = new ImageOption();
             option.setThumbnail(thumbnailData);
             option.setWinner(false);
@@ -107,17 +90,21 @@ public class Mapper {
 
             switch (type) {
                 case THUMBNAIL:
-                    option.setFileUrl(fileUrls.get(i));
+                    if (fileUrls != null && i < fileUrls.size()) {
+                        option.setFileUrl(fileUrls.get(i));
+                    }
                     break;
                 case TEXT:
-                    option.setText(texts.get(i));
+                    if (texts != null && i < texts.size()) {
+                        option.setText(texts.get(i));
+                    }
                     break;
                 case THUMBNAILTEXT:
-                    option.setFileUrl(fileUrls.get(i));
-                    option.setText(texts.get(i));
-                    if (texts.size() > i && fileUrls.size() > i) {
-                        option.setText(texts.get(i));
+                    if (fileUrls != null && i < fileUrls.size()) {
                         option.setFileUrl(fileUrls.get(i));
+                    }
+                    if (texts != null && i < texts.size()) {
+                        option.setText(texts.get(i));
                     }
                     break;
             }

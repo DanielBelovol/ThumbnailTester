@@ -3,19 +3,12 @@ package com.example.ThumbnailTester.services;
 import com.example.ThumbnailTester.data.thumbnail.ThumbnailData;
 import com.example.ThumbnailTester.data.user.UserData;
 import com.google.api.client.auth.oauth2.Credential;
-
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.FileContent;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.youtube.YouTube;
-import com.google.api.services.youtube.model.ThumbnailSetResponse;
-import com.google.api.services.youtube.model.Video;
-import com.google.api.services.youtube.model.VideoListResponse;
-import com.google.api.services.youtube.model.VideoSnippet;
-
-import com.google.auth.http.HttpCredentialsAdapter;
-import com.google.auth.oauth2.UserCredentials;
+import com.google.api.services.youtube.model.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,10 +18,30 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.util.Optional;
 
 @Slf4j
 @Service
 public class YouTubeService {
+    private static final String IMAGE_MIME_TYPE = "image/jpeg";
+    private static final String SNIPPET_PART = "snippet";
+    private static final String TOPIC_SUCCESS = "/topic/thumbnail/success";
+    private static final String TOPIC_ERROR = "/topic/thumbnail/error";
+    private static final String ERR_INVALID_CREDENTIALS_UPDATE_TITLE = "Invalid credentials for updating video title.";
+    private static final String ERR_VIDEO_NOT_FOUND = "Video with id %s not found.";
+    private static final String ERR_ERROR_UPDATING_TITLE = "Error updating video title: %s";
+    private static final String ERR_UNEXPECTED_ERROR_UPDATING_TITLE = "Unexpected error updating video title: %s";
+    private static final String ERR_INVALID_CREDENTIALS_GET_CHANNEL_ID = "Invalid credentials for getting user channel ID.";
+    private static final String ERR_ERROR_GETTING_CHANNEL_ID = "Error getting user channel ID: %s";
+    private static final String ERR_INVALID_CREDENTIALS_GET_OWNER_CHANNEL_ID = "Invalid credentials for getting video owner channel ID.";
+    private static final String ERR_ERROR_GETTING_OWNER_CHANNEL_ID = "Error getting video owner channel ID: %s";
+    private static final String ERR_ERROR_BUILDING_CREDENTIAL = "Error building YouTube service: %s";
+    private static final String ERR_VIDEO_URL_EMPTY = "Video URL is empty or null";
+    private static final String ERR_INVALID_YOUTUBE_URL_FORMAT = "Invalid YouTube URL format: %s";
+    private static final String ERR_INVALID_CREDENTIALS_GET_TITLE = "Invalid credentials for getting video title.";
+    private static final String ERR_ERROR_GETTING_TITLE = "Error getting video title: %s";
+    private static final String ERR_UNEXPECTED_ERROR_GETTING_TITLE = "Unexpected error getting video title: %s";
+
     @Value("${youtube.client.id}")
     private String clientId;
 
@@ -37,155 +50,158 @@ public class YouTubeService {
 
     @Value("${application.name}")
     private String applicationName;
+
     @Autowired
-    SupaBaseImageService supaBaseImageService;
+    private SupaBaseImageService supaBaseImageService;
+
     private final SimpMessagingTemplate messagingTemplate;
 
     public YouTubeService(SimpMessagingTemplate messagingTemplate) {
         this.messagingTemplate = messagingTemplate;
     }
 
+    /**
+     * Uploads a thumbnail image to YouTube.
+     *
+     * @param thumbnailData data of the thumbnail
+     * @param thumbnailFile file containing the thumbnail image
+     * @throws IOException if upload fails
+     */
     public void uploadThumbnail(ThumbnailData thumbnailData, File thumbnailFile) throws IOException {
         log.info("Uploading thumbnail started");
         Credential credential = buildCredentialFromRefreshToken(thumbnailData.getUser());
         if (credential == null) {
             throw new IOException("Failed to build credentials for user");
         }
-        log.info("Refresh token: " + credential.getRefreshToken());
-        YouTube youTube = new YouTube.Builder(
-                credential.getTransport(),
-                credential.getJsonFactory(),
-                credential)
-                .setApplicationName(applicationName)
-                .build();
 
-        // Prepare the thumbnail file for upload
-        FileContent mediaContent = new FileContent("image/jpeg", thumbnailFile);
-        log.info("file content: " + mediaContent);
+        YouTube youTube = buildYouTubeClient(credential);
 
-        // Execute the thumbnail upload
+        FileContent mediaContent = new FileContent(IMAGE_MIME_TYPE, thumbnailFile);
+        log.debug("File content prepared for upload: {}", mediaContent);
+
         YouTube.Thumbnails.Set thumbnailSet = youTube.thumbnails()
                 .set(getVideoIdFromUrl(thumbnailData.getVideoUrl()), mediaContent);
-        log.info("thumbnail set: " + thumbnailSet);
 
         ThumbnailSetResponse response = thumbnailSet.execute();
-        log.info("thumbnail response: " + response);
+        log.debug("Thumbnail upload response: {}", response);
 
-        // Check if the response contains the expected data (successful upload)
         if (response == null || response.getItems() == null || response.getItems().isEmpty()) {
             throw new IOException("Thumbnail upload failed: No response items found.");
         }
 
-        messagingTemplate.convertAndSend("/topic/thumbnail/success", "Thumbnail uploaded successfully.");
+        messagingTemplate.convertAndSend(TOPIC_SUCCESS, "Thumbnail uploaded successfully.");
         supaBaseImageService.deleteFileWithPath(thumbnailFile);
     }
 
+    /**
+     * Updates the title of a YouTube video.
+     *
+     * @param user     the user performing the update
+     * @param videoId  the ID of the video to update
+     * @param newTitle the new title to set
+     */
     public void updateVideoTitle(UserData user, String videoId, String newTitle) {
         try {
             log.info("Updating video title. videoId={}, newTitle={}", videoId, newTitle);
             Credential credential = buildCredentialFromRefreshToken(user);
             if (credential == null) {
-                log.error("Credential is null, cannot update video title");
-                messagingTemplate.convertAndSend("/topic/thumbnail/error", "Invalid credentials for updating video title.");
+                sendError(ERR_INVALID_CREDENTIALS_UPDATE_TITLE);
                 return;
             }
 
-            YouTube youtube = new YouTube.Builder(
-                    credential.getTransport(),
-                    credential.getJsonFactory(),
-                    credential)
-                    .setApplicationName(applicationName)
-                    .build();
+            YouTube youtube = buildYouTubeClient(credential);
 
-            // Получаем детали видео
-            YouTube.Videos.List videoRequest = youtube.videos().list("snippet");
-            videoRequest.setId(videoId);
-            VideoListResponse response = videoRequest.execute();
-
-            if (response.getItems().isEmpty()) {
-                String errMsg = "Video with id " + videoId + " not found.";
-                log.error(errMsg);
-                messagingTemplate.convertAndSend("/topic/thumbnail/error", errMsg);
+            Optional<Video> videoOpt = getVideoById(youtube, videoId);
+            if (videoOpt.isEmpty()) {
+                sendError(String.format(ERR_VIDEO_NOT_FOUND, videoId));
                 return;
             }
 
-            Video video = response.getItems().get(0);
+            Video video = videoOpt.get();
             VideoSnippet snippet = video.getSnippet();
-
-            // Логируем текущий заголовок
             log.info("Current video title: {}", snippet.getTitle());
 
-            // Обновляем заголовок
             snippet.setTitle(newTitle);
             video.setSnippet(snippet);
 
-            // Выполняем обновление
-            YouTube.Videos.Update videoUpdate = youtube.videos().update("snippet", video);
-            Video updatedVideo = videoUpdate.execute();
-
-            // Логируем результат
+            Video updatedVideo = youtube.videos().update(SNIPPET_PART, video).execute();
             log.info("Video title updated successfully to: {}", updatedVideo.getSnippet().getTitle());
-            messagingTemplate.convertAndSend("/topic/thumbnail/success", "Video title updated successfully.");
+            messagingTemplate.convertAndSend(TOPIC_SUCCESS, "Video title updated successfully.");
 
         } catch (IOException e) {
             log.error("IOException while updating video title", e);
-            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Error updating video title: " + e.getMessage());
+            sendError(String.format(ERR_ERROR_UPDATING_TITLE, e.getMessage()));
         } catch (Exception e) {
             log.error("Unexpected error while updating video title", e);
-            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Unexpected error updating video title: " + e.getMessage());
+            sendError(String.format(ERR_UNEXPECTED_ERROR_UPDATING_TITLE, e.getMessage()));
         }
     }
 
-
+    /**
+     * Retrieves the channel ID of the owner of a video.
+     *
+     * @param user    the user requesting the info
+     * @param videoId the ID of the video
+     * @return the channel ID of the video owner or null if not found
+     */
     public String getVideoOwnerChannelId(UserData user, String videoId) {
         try {
             Credential credential = buildCredentialFromRefreshToken(user);
-            YouTube youtube = new YouTube.Builder(
-                    credential.getTransport(),
-                    credential.getJsonFactory(),
-                    credential)
-                    .setApplicationName(applicationName)
-                    .build();
-
-            YouTube.Videos.List videoRequest = youtube.videos().list("snippet");
-            videoRequest.setId(videoId);
-            VideoListResponse response = videoRequest.execute();
-
-            if (response.getItems().isEmpty()) {
+            if (credential == null) {
+                sendError(ERR_INVALID_CREDENTIALS_GET_OWNER_CHANNEL_ID);
                 return null;
             }
-            return response.getItems().get(0).getSnippet().getChannelId();
+
+            YouTube youtube = buildYouTubeClient(credential);
+
+            Optional<Video> videoOpt = getVideoById(youtube, videoId);
+            return videoOpt.map(v -> v.getSnippet().getChannelId()).orElse(null);
+
         } catch (IOException e) {
-            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Error getting video owner channel ID: " + e.getMessage());
+            log.error("Error getting video owner channel ID", e);
+            sendError(String.format(ERR_ERROR_GETTING_OWNER_CHANNEL_ID, e.getMessage()));
+            return null;
         }
-        return null;
     }
 
+    /**
+     * Retrieves the channel ID of the authenticated user.
+     *
+     * @param user the user
+     * @return the channel ID or null if not found
+     */
     public String getUserChannelId(UserData user) {
         try {
             Credential credential = buildCredentialFromRefreshToken(user);
+            if (credential == null) {
+                sendError(ERR_INVALID_CREDENTIALS_GET_CHANNEL_ID);
+                return null;
+            }
 
-            YouTube youtube = new YouTube.Builder(
-                    credential.getTransport(),
-                    credential.getJsonFactory(),
-                    credential)
-                    .setApplicationName(applicationName)
-                    .build();
+            YouTube youtube = buildYouTubeClient(credential);
 
             YouTube.Channels.List channelRequest = youtube.channels().list("id");
             channelRequest.setMine(true);
-            var response = channelRequest.execute();
+            ChannelListResponse response = channelRequest.execute();
 
             if (response.getItems().isEmpty()) {
                 return null;
             }
             return response.getItems().get(0).getId();
+
         } catch (IOException e) {
-            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Error getting user channel ID: " + e.getMessage());
+            log.error("Error getting user channel ID", e);
+            sendError(String.format(ERR_ERROR_GETTING_CHANNEL_ID, e.getMessage()));
+            return null;
         }
-        return null;
     }
 
+    /**
+     * Builds a Credential object from the user's refresh token.
+     *
+     * @param user the user
+     * @return Credential or null if failed
+     */
     public Credential buildCredentialFromRefreshToken(UserData user) {
         try {
             Credential credential = new GoogleCredential.Builder()
@@ -195,7 +211,6 @@ public class YouTubeService {
                     .build()
                     .setRefreshToken(user.getRefreshToken());
 
-            // Попытка обновить токен
             boolean refreshed = credential.refreshToken();
             if (refreshed) {
                 log.info("Successfully refreshed access token for user with GoogleId: {}", user.getGoogleId());
@@ -208,61 +223,101 @@ public class YouTubeService {
 
         } catch (IOException | GeneralSecurityException e) {
             log.error("Error building YouTube credential for user with GoogleId: {}", user.getGoogleId(), e);
-            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Error building YouTube service: " + e.getMessage());
+            sendError(String.format(ERR_ERROR_BUILDING_CREDENTIAL, e.getMessage()));
+            return null;
         }
-        return null;
     }
 
-
+    /**
+     * Extracts the video ID from a YouTube video URL.
+     *
+     * @param videoUrl the full YouTube video URL
+     * @return the video ID or null if the URL format is invalid
+     */
     public String getVideoIdFromUrl(String videoUrl) {
-        if (videoUrl.contains("v=")) {
-            return videoUrl.split("v=")[1].split("&")[0];  // Avoid split issues with additional parameters
-        } else {
-            // If URL format is invalid, send an error message using messagingTemplate
-            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Invalid YouTube URL format: " + videoUrl);
-            return null;  // Or you can return an empty string or another value to signify an error
+        if (isBlank(videoUrl)) {
+            sendError(ERR_VIDEO_URL_EMPTY);
+            return null;
         }
+
+        int vIndex = videoUrl.indexOf("v=");
+        if (vIndex < 0) {
+            sendError(String.format(ERR_INVALID_YOUTUBE_URL_FORMAT, videoUrl));
+            return null;
+        }
+
+        String idPart = videoUrl.substring(vIndex + 2);
+        int ampIndex = idPart.indexOf('&');
+        return ampIndex > 0 ? idPart.substring(0, ampIndex) : idPart;
     }
+
+    /**
+     * Retrieves the title of a YouTube video.
+     *
+     * @param user    the user requesting the title
+     * @param videoId the ID of the video
+     * @return the video title or null if not found
+     */
     public String getVideoTitle(UserData user, String videoId) {
         try {
             Credential credential = buildCredentialFromRefreshToken(user);
             if (credential == null) {
-                log.error("Credential is null, cannot get video title");
-                messagingTemplate.convertAndSend("/topic/thumbnail/error", "Invalid credentials for getting video title.");
+                sendError(ERR_INVALID_CREDENTIALS_GET_TITLE);
                 return null;
             }
 
-            YouTube youtube = new YouTube.Builder(
-                    credential.getTransport(),
-                    credential.getJsonFactory(),
-                    credential)
-                    .setApplicationName(applicationName)
-                    .build();
+            YouTube youtube = buildYouTubeClient(credential);
 
-            YouTube.Videos.List videoRequest = youtube.videos().list("snippet");
-            videoRequest.setId(videoId);
-            VideoListResponse response = videoRequest.execute();
-
-            if (response.getItems().isEmpty()) {
-                String errMsg = "Video with id " + videoId + " not found.";
-                log.error(errMsg);
-                messagingTemplate.convertAndSend("/topic/thumbnail/error", errMsg);
+            Optional<Video> videoOpt = getVideoById(youtube, videoId);
+            if (videoOpt.isEmpty()) {
+                sendError(String.format(ERR_VIDEO_NOT_FOUND, videoId));
                 return null;
             }
 
-            Video video = response.getItems().get(0);
-            VideoSnippet snippet = video.getSnippet();
-
-            return snippet.getTitle();
+            return videoOpt.get().getSnippet().getTitle();
 
         } catch (IOException e) {
             log.error("IOException while getting video title", e);
-            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Error getting video title: " + e.getMessage());
+            sendError(String.format(ERR_ERROR_GETTING_TITLE, e.getMessage()));
+            return null;
         } catch (Exception e) {
             log.error("Unexpected error while getting video title", e);
-            messagingTemplate.convertAndSend("/topic/thumbnail/error", "Unexpected error getting video title: " + e.getMessage());
+            sendError(String.format(ERR_UNEXPECTED_ERROR_GETTING_TITLE, e.getMessage()));
+            return null;
         }
-        return null;
     }
 
+// --- Private helper methods ---
+
+    private YouTube buildYouTubeClient(Credential credential) {
+        return new YouTube.Builder(
+                credential.getTransport(),
+                credential.getJsonFactory(),
+                credential)
+                .setApplicationName(applicationName)
+                .build();
+    }
+
+    private Optional<Video> getVideoById(YouTube youtube, String videoId) throws IOException {
+        if (isBlank(videoId)) {
+            return Optional.empty();
+        }
+        YouTube.Videos.List videoRequest = youtube.videos().list(SNIPPET_PART);
+        videoRequest.setId(videoId);
+        VideoListResponse response = videoRequest.execute();
+
+        if (response.getItems().isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(response.getItems().get(0));
+    }
+
+    private void sendError(String message) {
+        log.error(message);
+        messagingTemplate.convertAndSend(TOPIC_ERROR, message);
+    }
+
+    private static boolean isBlank(String str) {
+        return str == null || str.trim().isEmpty();
+    }
 }
