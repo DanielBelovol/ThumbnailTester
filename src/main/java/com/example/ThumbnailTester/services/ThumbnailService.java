@@ -3,7 +3,7 @@ import com.example.ThumbnailTester.data.thumbnail.ThumbnailData; import com.exam
 import javax.imageio.ImageIO; import java.awt.*; import java.io.File; import java.io.IOException;
 @Service public class ThumbnailService { private static final Logger log = LoggerFactory.getLogger(ThumbnailService.class);
     private static final String TOPIC_ERROR = "/topic/thumbnail/error";
-    private static final double MIN_FILE_SIZE_MB = 2.0;
+    private static final double MAX_FILE_SIZE = 2.0;
     private static final int ASPECT_RATIO_WIDTH = 16;
     private static final int ASPECT_RATIO_HEIGHT = 9;
 
@@ -56,7 +56,7 @@ import javax.imageio.ImageIO; import java.awt.*; import java.io.File; import jav
             return false;
         }
 
-        boolean valid = sizeMb >= MIN_FILE_SIZE_MB && isAspectRatio16by9(image);
+        boolean valid = sizeMb <= MAX_FILE_SIZE && isAspectRatio16by9(image);
 
         safeDeleteFile(fileImage);
 
