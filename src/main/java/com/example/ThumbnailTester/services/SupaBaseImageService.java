@@ -1,10 +1,13 @@
 package com.example.ThumbnailTester.services;
 import org.slf4j.Logger; import org.slf4j.LoggerFactory; import org.springframework.stereotype.Service;
 import java.io.File; import java.io.FileOutputStream; import java.io.InputStream; import java.io.OutputStream; import java.net.URL; import java.nio.file.Paths; import java.security.MessageDigest; import java.security.NoSuchAlgorithmException;
+import java.util.Random;
+
 @Service public class SupaBaseImageService { private static final Logger log = LoggerFactory.getLogger(SupaBaseImageService.class);
     private static final String THUMBNAILS_DIR_NAME = "thumbnails";
     private static final int BUFFER_SIZE = 16 * 1024; // 16 KB
     private static final int MAX_DOWNLOAD_ATTEMPTS = 3;
+    private static final Random random = new Random();
 
     /**
      * Downloads a file from the given URL and saves it to a unique file in the temp thumbnails directory.
@@ -116,8 +119,12 @@ import java.io.File; import java.io.FileOutputStream; import java.io.InputStream
         String urlString = url.toString();
         String hash = md5Hex(urlString);
 
-        return originalFileName + "_" + hash + extension;
+        // Добавляем рандомный числовой суффикс
+        int randomSuffix = random.nextInt(1_000_000); // число от 0 до 999999
+
+        return originalFileName + "_" + hash + "_" + randomSuffix + extension;
     }
+
 
     /**
      * Computes MD5 hash of the input string and returns it as hex.
