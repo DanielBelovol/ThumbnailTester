@@ -229,7 +229,7 @@ Certainly! Here's the English version of the `.env` instructions you can add to 
 
 ## Environment Configuration
 
-To run the application correctly, you need to create a `.env` file in the root directory of the project with the following structure:
+To run the application correctly, you need to edit a `.env` file in the root directory of the project:
 
 ```env
 # Application name
