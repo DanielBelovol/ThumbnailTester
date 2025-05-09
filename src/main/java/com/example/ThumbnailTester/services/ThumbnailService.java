@@ -55,12 +55,24 @@ import javax.imageio.ImageIO; import java.awt.*; import java.io.File; import jav
             safeDeleteFile(fileImage);
             return false;
         }
+        boolean sizeValid = sizeMb <= MAX_FILE_SIZE;
+        boolean is169 = isAspectRatio16by9(image);
 
-        boolean valid = sizeMb <= MAX_FILE_SIZE && isAspectRatio16by9(image);
-
+        if (!sizeValid){
+            log.info("Size of image is bigger than 2mb");
+            sendError("Size of image is bigger than 2mb");
+            safeDeleteFile(fileImage);
+            return false;
+        }
+        if(!is169){
+            log.info("Image is not 16:9");
+            sendError("Image is not 16:9");
+            safeDeleteFile(fileImage);
+            return false;
+        }
         safeDeleteFile(fileImage);
 
-        return valid;
+        return sizeValid&&is169;
     }
 
     /**
@@ -104,6 +116,8 @@ import javax.imageio.ImageIO; import java.awt.*; import java.io.File; import jav
             boolean deleted = file.delete();
             if (!deleted) {
                 log.warn("Failed to delete file: {}", file.getAbsolutePath());
+            }else{
+                log.info("File with name:"+file.getName()+" has been deleted");
             }
         }
     }

@@ -51,7 +51,7 @@ CREATE TABLE thumbnail_test_config
 (
     id                      BIGSERIAL PRIMARY KEY,
     test_type               VARCHAR(50) NOT NULL,
-    testing_type            VARCHAR(50) NOT NULL,
+    testing_mode            VARCHAR(50) NOT NULL,
     testing_by_time_minutes BIGINT,
     testing_by_metrics      BIGINT,
     criterion_of_winner     VARCHAR(50) NOT NULL,

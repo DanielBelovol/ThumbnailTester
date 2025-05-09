@@ -15,7 +15,8 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ImageOption {
+public class
+ImageOption {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

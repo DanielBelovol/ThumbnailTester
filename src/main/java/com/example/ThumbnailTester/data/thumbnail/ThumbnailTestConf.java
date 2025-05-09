@@ -17,11 +17,11 @@ public class ThumbnailTestConf {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "test_type", nullable = false)
-    private TestConfType testType;
+    private TestingType testType;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "testing_type", nullable = false)
-    private TestingType testingType;
+    @Column(name = "testing_mode", nullable = false)
+    private TestingMode testingMode;
 
     @Column(name = "testing_by_time_minutes")
     private long testingByTimeMinutes;
@@ -49,7 +49,7 @@ public class ThumbnailTestConf {
         return "ThumbnailTestConf{" +
                 "id=" + id +
                 ", testType=" + testType +
-                ", testingType=" + testingType +
+                ", testingType=" + testingMode +
                 ", testingByTimeMinutes=" + testingByTimeMinutes +
                 ", testingByMetrics=" + testingByMetrics +
                 ", criterionOfWinner=" + criterionOfWinner +

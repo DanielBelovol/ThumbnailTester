@@ -8,8 +8,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ThumbnailTestConfRequest {
-    private String testType;
     private String testingType;
+    private String testingMode;
     private long testingByTimeMinutes;
     private long testingByMetrics;
     private String criterionOfWinner;

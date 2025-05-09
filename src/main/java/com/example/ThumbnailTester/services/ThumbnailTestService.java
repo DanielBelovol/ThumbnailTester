@@ -46,7 +46,6 @@ public class ThumbnailTestService {
 
     // Error messages
     private static final String ERR_NO_IMAGES_PROVIDED = "NoImagesProvided";
-    private static final String ERR_UNSUPPORTED_IMAGE = "UnsupportedImage";
     private static final String ERR_INVALID_VIDEO_URL = "InvalidVideoUrl";
     private static final String ERR_VIDEO_NOT_FOUND = "VideoNotFound";
     private static final String ERR_USER_CHANNEL_NOT_FOUND = "UserChannelNotFound";
@@ -99,7 +98,6 @@ public class ThumbnailTestService {
             }
 
             if (!validateImageOptions(imageOptions)) {
-                sendError(ERR_UNSUPPORTED_IMAGE);
                 return;
             }
 
@@ -180,8 +178,8 @@ public class ThumbnailTestService {
     }
 
     @Async
-    public void startTest(ThumbnailRequest thumbnailRequest, TestConfType testConfType, ThumbnailData thumbnailData) {
-        log.info("Starting test with type: {}", testConfType);
+    public void startTest(ThumbnailRequest thumbnailRequest, TestingType testingType, ThumbnailData thumbnailData) {
+        log.info("Starting test with type: {}", testingType);
         List<ImageOption> imageOptions = thumbnailData.getImageOptions();
         List<String> texts = thumbnailRequest.getTexts();
         long delayMillis = thumbnailRequest.getTestConfRequest().getTestingByTimeMinutes() * 60_000L;
@@ -193,7 +191,7 @@ public class ThumbnailTestService {
         }
         log.info("Thumbnail queue initialized: {}", thumbnailQueue);
 
-        int count = calculateTestCount(testConfType, imageOptions, texts);
+        int count = calculateTestCount(testingType, imageOptions, texts);
         log.info("Number of tests to run: {}", count);
 
         if (count == 0) {
@@ -208,7 +206,7 @@ public class ThumbnailTestService {
             thumbnailQueue.delete(queueItem);
             queueItem.setActive(true);
             try {
-                processSingleTestSync(thumbnailData, queueItem, delayMillis, testConfType);
+                processSingleTestSync(thumbnailData, queueItem, delayMillis, testingType);
             } catch (Exception e) {
                 log.error("Error during processing single test", e);
                 sendError(ERR_INTERNAL_SERVER + ": " + e.getMessage());
@@ -226,15 +224,15 @@ public class ThumbnailTestService {
         }
     }
 
-    private int calculateTestCount(TestConfType testConfType, List<ImageOption> imageOptions, List<String> texts) {
-        return switch (testConfType) {
+    private int calculateTestCount(TestingType testingType, List<ImageOption> imageOptions, List<String> texts) {
+        return switch (testingType) {
             case THUMBNAIL -> imageOptions != null ? imageOptions.size() : 0;
             case TEXT -> texts != null ? texts.size() : 0;
             case THUMBNAILTEXT -> (imageOptions != null && texts != null && imageOptions.size() == texts.size()) ? imageOptions.size() : 0;
         };
     }
 
-    private void processSingleTestSync(ThumbnailData thumbnailData, ThumbnailQueueItem queueItem, long delayMillis, TestConfType testConfType) {
+    private void processSingleTestSync(ThumbnailData thumbnailData, ThumbnailQueueItem queueItem, long delayMillis, TestingType testingType) {
         log.info("Processing single test sync");
         try {
             ImageOption imageOption = queueItem.getImageOption();
@@ -249,7 +247,7 @@ public class ThumbnailTestService {
             LocalDate startDate = LocalDate.now();
 
             try {
-                if (testConfType == TestConfType.THUMBNAIL || testConfType == TestConfType.THUMBNAILTEXT) {
+                if (testingType == TestingType.THUMBNAIL || testingType == TestingType.THUMBNAILTEXT) {
                     log.info("Uploading thumbnail");
                     File imageFile = supaBaseImageService.getFileFromPath(new URL(imageOption.getFileUrl()));
 
@@ -268,7 +266,7 @@ public class ThumbnailTestService {
                 return;
             }
 
-            if (testConfType == TestConfType.TEXT || testConfType == TestConfType.THUMBNAILTEXT) {
+            if (testingType == TestingType.TEXT || testingType == TestingType.THUMBNAILTEXT) {
                 String videoId = youTubeService.getVideoIdFromUrl(thumbnailData.getVideoUrl());
                 log.info("Updating video title to: {}", text);
                 youTubeService.updateVideoTitle(thumbnailData.getUser(), videoId, text);

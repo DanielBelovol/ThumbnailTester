@@ -4,21 +4,21 @@ import java.util.ArrayList; import java.util.List;
 @Service public class Mapper { @Autowired private UserService userService; private static final Logger log = LoggerFactory.getLogger(Mapper.class);
     public ThumbnailTestConf testConfRequestToDTO(ThumbnailTestConfRequest request) {
         log.info("Entering testConfRequestToDTO method.");
-        log.info("TestType: {}", request.getTestType());
+        log.info("TestType: {}", request.getTestingType());
         log.info("TestingType: {}", request.getTestingType());
         log.info("CriterionOfWinner: {}", request.getCriterionOfWinner());
 
         ThumbnailTestConf testConf = new ThumbnailTestConf();
 
         try {
-            testConf.setTestType(TestConfType.valueOf(request.getTestType()));
+            testConf.setTestType(TestingType.valueOf(request.getTestingType()));
         } catch (IllegalArgumentException e) {
-            log.error("Invalid TestConfType: {}", request.getTestType(), e);
+            log.error("Invalid TestConfType: {}", request.getTestingType(), e);
             // Optionally set default or return null
         }
 
         try {
-            testConf.setTestingType(TestingType.valueOf(request.getTestingType()));
+            testConf.setTestingMode(TestingMode.valueOf(request.getTestingType()));
         } catch (IllegalArgumentException e) {
             log.error("Invalid TestingType: {}", request.getTestingType(), e);
         }
@@ -57,7 +57,7 @@ import java.util.ArrayList; import java.util.List;
             thumbnailData.setUser(userData); // or create a new UserData if needed
         }
 
-        TestConfType type = thumbnailData.getTestConf() != null ? thumbnailData.getTestConf().getTestType() : TestConfType.THUMBNAIL;
+        TestingType type = thumbnailData.getTestConf() != null ? thumbnailData.getTestConf().getTestType() : TestingType.THUMBNAIL;
 
         List<ImageOption> imageOptions = createImageOptions(
                 thumbnailRequest.getImages(),
@@ -73,7 +73,7 @@ import java.util.ArrayList; import java.util.List;
         return thumbnailQueueItem.getImageOption();
     }
 
-    public List<ImageOption> createImageOptions(List<String> fileUrls, List<String> texts, ThumbnailData thumbnailData, TestConfType type) {
+    public List<ImageOption> createImageOptions(List<String> fileUrls, List<String> texts, ThumbnailData thumbnailData, TestingType type) {
         List<ImageOption> imageOptions = new ArrayList<>();
         if (thumbnailData == null) {
             log.error("ThumbnailData is null when attempting to create image options");
