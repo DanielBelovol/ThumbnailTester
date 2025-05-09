@@ -223,6 +223,41 @@ Add this description to your DTO documentation so frontend developers have a com
 }
 ```
 
+Certainly! Here's the English version of the `.env` instructions you can add to your README:
+
+---
+
+## Environment Configuration
+
+To run the application correctly, you need to create a `.env` file in the root directory of the project with the following structure:
+
+```env
+# Application name
+APPLICATION_NAME=ThumbnailTester
+SPRING_APPLICATION_NAME=ThumbnailTester
+
+# Database connection settings
+SPRING_DATASOURCE_URL=jdbc:postgresql://thumbnail-test-db:5432/thumbnailTester
+SPRING_DATASOURCE_USERNAME=DATABASE_USER
+SPRING_DATASOURCE_PASSWORD=DATABASE_PASSWORD
+
+# Flyway migration settings
+SPRING_FLYWAY_URL=jdbc:postgresql://thumbnail-test-db:5432/thumbnailTester
+SPRING_FLYWAY_USER=DATABASE_USER
+SPRING_FLYWAY_PASSWORD=DATABASE_PASSWORD
+
+# YouTube API credentials
+YOUTUBE_CLIENT_ID=YOUR_CLIENT_ID
+YOUTUBE_CLIENT_SECRET=YOUR_YOUTUBE_CLIENT_SECRET
+```
+
+> **Important:**  
+> Replace the values with those appropriate for your environment — database URLs, usernames, passwords, and YouTube API credentials.
+
+---
+
+This file is used to configure the application and load environment variables at startup. Make sure your environment or build tools properly load these variables.
+
 ---
 
 ## Usage Flow
