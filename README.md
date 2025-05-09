@@ -1,4 +1,4 @@
-# ThumbnailTester API & Data Structures Documentation
+# ThumbnailTester & Data Structures Documentation
 
 This document provides a comprehensive overview of the WebSocket API and data structures used by the ThumbnailTester backend service.
 
