@@ -272,6 +272,16 @@ This file is used to configure the application and load environment variables at
 4. **Handle** incoming messages appropriately in the frontend UI.
 5. To **remove** a testing item, send a message to `/app/remove-testingItem` with the image option ID and video URL.
 
+## Running with Docker
+
+If you want to run the application using Docker, make sure you have created the `.env` file as described above, then start the containers with the following command:
+
+```bash
+docker-compose --env-file .env up --build
+```
+
+This command will build and start the Docker containers using the environment variables defined in your `.env` file.
+
 ---
 
 ## Important Notes
