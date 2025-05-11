@@ -6,6 +6,7 @@ import com.example.ThumbnailTester.data.user.UserData;
 import com.example.ThumbnailTester.dto.ImageOption;
 import com.example.ThumbnailTester.dto.ThumbnailQueue;
 import com.example.ThumbnailTester.dto.ThumbnailQueueItem;
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,6 +57,7 @@ public class ThumbnailTestService {
     private static final String ERR_THUMBNAIL_UPLOAD_FAILED = "Thumbnail upload failed";
     private static final String ERR_ERROR_UPDATING_TITLE = "Error with updating title";
     private static final String ERR_FINAL_RESULT_ERROR = "FinalResultError";
+    private static final String ERR_TOO_MANY_REQUESTS_BY_USER = "The user has uploaded too many thumbnails recently. Please try the request again later";
 
     private final SimpMessagingTemplate messagingTemplate;
     private final TaskScheduler taskScheduler;
@@ -256,12 +258,24 @@ public class ThumbnailTestService {
                     supaBaseImageService.deleteFileWithPath(imageFile);
                     log.info("Thumbnail upload completed");
                 }
-            } catch (IOException e) {
+            } catch (GoogleJsonResponseException e){
+                if(e.getStatusCode()==429) {
+                    log.error(ERR_TOO_MANY_REQUESTS_BY_USER);
+                    sendError(ERR_TOO_MANY_REQUESTS_BY_USER);
+                    return;
+                }else{
+                    log.error(ERR_THUMBNAIL_UPLOAD_FAILED, e);
+                    sendError(ERR_THUMBNAIL_UPLOAD_FAILED + ": " + e.getMessage());
+                    return;
+                }
+            }
+            catch (IOException e) {
                 log.error(ERR_THUMBNAIL_UPLOAD_FAILED, e);
                 sendError(ERR_THUMBNAIL_UPLOAD_FAILED + ": " + e.getMessage());
                 return;
             } catch (InterruptedException e) {
                 log.error("Interrupted during thumbnail upload", e);
+                Thread.currentThread().interrupt();
                 sendError(ERR_INTERNAL_SERVER + ": " + e.getMessage());
                 return;
             }

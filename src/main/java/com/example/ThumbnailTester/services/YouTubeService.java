@@ -6,6 +6,7 @@ import com.example.ThumbnailTester.util.AESUtil;
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.http.FileContent;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.youtube.YouTube;
@@ -85,15 +86,23 @@ public class YouTubeService {
         YouTube.Thumbnails.Set thumbnailSet = youTube.thumbnails()
                 .set(getVideoIdFromUrl(thumbnailData.getVideoUrl()), mediaContent);
 
-        ThumbnailSetResponse response = thumbnailSet.execute();
-        log.debug("Thumbnail upload response: {}", response);
+        try {
+            ThumbnailSetResponse response = thumbnailSet.execute();
+            log.debug("Thumbnail upload response: {}", response);
 
-        if (response == null || response.getItems() == null || response.getItems().isEmpty()) {
-            throw new IOException("Thumbnail upload failed: No response items found.");
+            if (response == null || response.getItems() == null || response.getItems().isEmpty()) {
+                throw new IOException("Thumbnail upload failed: No response items found.");
+            }
+
+            messagingTemplate.convertAndSend(TOPIC_SUCCESS, "Thumbnail uploaded successfully.");
+            supaBaseImageService.deleteFileWithPath(thumbnailFile);
+        }catch (GoogleJsonResponseException e){
+            if (e.getStatusCode() == 429) {
+                throw e;
+            } else {
+                throw new IOException();
+            }
         }
-
-        messagingTemplate.convertAndSend(TOPIC_SUCCESS, "Thumbnail uploaded successfully.");
-        supaBaseImageService.deleteFileWithPath(thumbnailFile);
     }
 
     /**

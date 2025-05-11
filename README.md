@@ -1,4 +1,4 @@
-# ThumbnailTester API & Data Structures Documentation
+# ThumbnailTester & Data Structures Documentation
 
 This document provides a comprehensive overview of the WebSocket API and data structures used by the ThumbnailTester backend service.
 
@@ -229,7 +229,7 @@ Certainly! Here's the English version of the `.env` instructions you can add to 
 
 ## Environment Configuration
 
-To run the application correctly, you need to create a `.env` file in the root directory of the project with the following structure:
+To run the application correctly, you need to edit a `.env` file in the root directory of the project:
 
 ```env
 # Application name
@@ -271,6 +271,16 @@ This file is used to configure the application and load environment variables at
     - `/topic/thumbnail/result` — scheduled test results after test duration
 4. **Handle** incoming messages appropriately in the frontend UI.
 5. To **remove** a testing item, send a message to `/app/remove-testingItem` with the image option ID and video URL.
+
+## Running with Docker
+
+If you want to run the application using Docker, make sure you have created the `.env` file as described above, then start the containers with the following command:
+
+```bash
+docker-compose --env-file .env up --build
+```
+
+This command will build and start the Docker containers using the environment variables defined in your `.env` file.
 
 ---
 
