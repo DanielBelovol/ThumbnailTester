@@ -3,12 +3,14 @@ package com.example.ThumbnailTester.services;
 import com.example.ThumbnailTester.data.thumbnail.ThumbnailStats;
 import com.example.ThumbnailTester.data.user.UserData;
 import com.example.ThumbnailTester.dto.ThumbnailQueueItem;
+import com.example.ThumbnailTester.util.AESUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -27,6 +29,8 @@ public class YouTubeAnalyticsService {
     private static final Logger log = LoggerFactory.getLogger(YouTubeAnalyticsService.class);
 
     private final SimpMessagingTemplate messagingTemplate;
+    @Autowired
+    private AESUtil aesUtil;
 
     @Value("${youtube.client.id}")
     private String clientId;
@@ -73,7 +77,7 @@ public class YouTubeAnalyticsService {
 
         try {
             String videoId = extractVideoIdFromUrl(thumbnailQueueItem.getVideoUrl());
-            String accessToken = refreshAccessToken(user.getRefreshToken());
+            String accessToken = refreshAccessToken(aesUtil.decrypt(user.getRefreshToken()));
             if (accessToken == null) {
                 sendError(ERR_FAILED_REFRESH_TOKEN);
                 return fillEmptyStats(new ThumbnailStats(), thumbnailQueueItem);
@@ -149,6 +153,9 @@ public class YouTubeAnalyticsService {
         } catch (IOException | InterruptedException e) {
             sendError(ERR_RETRIEVING_ANALYTICS + e.getMessage());
             log.error("Error fetching YouTube Analytics data", e);
+        } catch (Exception e) {
+            log.error("Error decoding refresh token");
+            throw new RuntimeException(e);
         }
 
         ThumbnailStats emptyStats = new ThumbnailStats();

@@ -2,6 +2,7 @@ package com.example.ThumbnailTester.services;
 
 import com.example.ThumbnailTester.data.thumbnail.ThumbnailData;
 import com.example.ThumbnailTester.data.user.UserData;
+import com.example.ThumbnailTester.util.AESUtil;
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
@@ -53,6 +54,8 @@ public class YouTubeService {
 
     @Autowired
     private SupaBaseImageService supaBaseImageService;
+    @Autowired
+    private AESUtil aesUtil;
 
     private final SimpMessagingTemplate messagingTemplate;
 
@@ -209,12 +212,12 @@ public class YouTubeService {
                     .setJsonFactory(JacksonFactory.getDefaultInstance())
                     .setClientSecrets(clientId, clientSecret)
                     .build()
-                    .setRefreshToken(user.getRefreshToken());
+                    .setRefreshToken(aesUtil.decrypt(user.getRefreshToken()));
 
             boolean refreshed = credential.refreshToken();
             if (refreshed) {
                 log.info("Successfully refreshed access token for user with GoogleId: {}", user.getGoogleId());
-                log.debug("New access token: {}", credential.getAccessToken());
+                log.debug("New access token: {}", credential.getAccessToken().substring(0,10));
             } else {
                 log.warn("Failed to refresh access token for user with GoogleId: {}", user.getGoogleId());
             }
@@ -225,6 +228,9 @@ public class YouTubeService {
             log.error("Error building YouTube credential for user with GoogleId: {}", user.getGoogleId(), e);
             sendError(String.format(ERR_ERROR_BUILDING_CREDENTIAL, e.getMessage()));
             return null;
+        } catch (Exception e) {
+            log.error("Error decoding refresh token");
+            throw new RuntimeException(e);
         }
     }
 
