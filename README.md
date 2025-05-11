@@ -249,6 +249,11 @@ SPRING_FLYWAY_PASSWORD=DATABASE_PASSWORD
 # YouTube API credentials
 YOUTUBE_CLIENT_ID=YOUR_CLIENT_ID
 YOUTUBE_CLIENT_SECRET=YOUR_YOUTUBE_CLIENT_SECRET
+
+# AES Encryption Key
+# The application expects Google ID and refresh token to be AES-decrypted.
+# Provide the AES key here (must match the key used by the client for encryption).
+KEY_AES=your-32-byte-aes-key-here
 ```
 
 > **Important:**  
