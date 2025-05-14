@@ -18,9 +18,12 @@ import com.example.ThumbnailTester.data.thumbnail.ThumbnailData; import com.exam
 
     @MessageMapping("/thumbnail/test")
     public void handleTestMessage(@Payload ThumbnailRequest request) {
-        if(request.getTestConfRequest().getTestingType() == TestingMode.METRIC_BASED){
-
+        if(TestingMode.METRIC_BASED == TestingMode.valueOf(request.getTestConfRequest().getTestingType())){
+            messagingTemplate.convertAndSend("/topic/thumbnail/error", "METRIC_BASED function is unavailable");
+            log.error("METRIC_BASED function is unavailable");
+            return;
         }
+
         log.info("Received thumbnail request: {}", request.getVideoUrl());
 
         if (request.getImages() == null || request.getImages().isEmpty()) {
