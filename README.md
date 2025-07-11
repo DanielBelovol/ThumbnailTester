@@ -41,7 +41,7 @@ Configuration details for the thumbnail test.
 
 | Field                  | Type     | Description                                                                                  |
 |------------------------|----------|----------------------------------------------------------------------------------------------|
-| `testType`             | `String` | Type of test (`THUMBNAIL`, `TEXT`, `THUMBNAIL+TEXT`)                                         |
+| `testingType`          | `String` | Type of test (`THUMBNAIL`, `TEXT`, `THUMBNAIL+TEXT`)                                         |
 | `testingMode`          | `String` | Testing mode (e.g., `TIME_BASED`, `METRICS_BASED(NOW IS NOT WORKING!!)`)                     |
 | `testingByTimeMinutes` | `long`   | Duration of the test in minutes                                                              |
 | `testingByMetrics`     | `long`   | Metric-based testing parameter (NOT WORKING NOW!!)                                           |
@@ -186,8 +186,8 @@ Add this description to your DTO documentation so frontend developers have a com
   ],
   "videoUrl": "https://www.youtube.com/watch?v=VIDEO_ID",
   "testConfRequest": {
-    "testType": "THUMBNAILTEXT",
-    "testingType": "TIME_BASED",
+    "testingType": "THUMBNAILTEXT",
+    "testingMode": "TIME_BASED",
     "testingByTimeMinutes": 10,
     "testingByMetrics": 0,
     "criterionOfWinner": "VIEWS"

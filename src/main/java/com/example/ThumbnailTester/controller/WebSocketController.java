@@ -18,7 +18,7 @@ import com.example.ThumbnailTester.data.thumbnail.ThumbnailData; import com.exam
 
     @MessageMapping("/thumbnail/test")
     public void handleTestMessage(@Payload ThumbnailRequest request) {
-        if(TestingMode.METRIC_BASED == TestingMode.valueOf(request.getTestConfRequest().getTestingType())){
+        if(TestingMode.METRIC_BASED == TestingMode.valueOf(request.getTestConfRequest().getTestingMode())){
             messagingTemplate.convertAndSend("/topic/thumbnail/error", "METRIC_BASED function is unavailable");
             log.error("METRIC_BASED function is unavailable");
             return;

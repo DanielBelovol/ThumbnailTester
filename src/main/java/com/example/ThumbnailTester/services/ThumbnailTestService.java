@@ -134,18 +134,24 @@ public class ThumbnailTestService {
 
     private boolean validateImageOptions(List<ImageOption> imageOptions) {
         for (ImageOption option : imageOptions) {
+            String fileUrl = option.getFileUrl();
+            if (fileUrl == null || fileUrl.isEmpty()) {
+                log.error("Invalid image URL: null or empty");
+                return false;
+            }
             try {
-                File file = supaBaseImageService.getFileFromPath(new URL(option.getFileUrl()));
+                File file = supaBaseImageService.getFileFromPath(new URL(fileUrl));
                 if (!thumbnailService.isValid(file)) {
                     return false;
                 }
             } catch (MalformedURLException e) {
-                log.error("Invalid image URL: {}", option.getFileUrl(), e);
+                log.error("Invalid image URL: {}", fileUrl, e);
                 return false;
             }
         }
         return true;
     }
+
 
     private boolean validateVideoOwnership(UserData userData, String videoId) {
         String videoOwnerChannelId = youTubeService.getVideoOwnerChannelId(userData, videoId);

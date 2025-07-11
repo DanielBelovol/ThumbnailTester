@@ -5,7 +5,7 @@ import java.util.ArrayList; import java.util.List;
     public ThumbnailTestConf testConfRequestToDTO(ThumbnailTestConfRequest request) {
         log.info("Entering testConfRequestToDTO method.");
         log.info("TestType: {}", request.getTestingType());
-        log.info("TestingType: {}", request.getTestingType());
+        log.info("TestingType: {}", request.getTestingMode());
         log.info("CriterionOfWinner: {}", request.getCriterionOfWinner());
 
         ThumbnailTestConf testConf = new ThumbnailTestConf();
@@ -18,7 +18,7 @@ import java.util.ArrayList; import java.util.List;
         }
 
         try {
-            testConf.setTestingMode(TestingMode.valueOf(request.getTestingType()));
+            testConf.setTestingMode(TestingMode.valueOf(request.getTestingMode()));
         } catch (IllegalArgumentException e) {
             log.error("Invalid TestingType: {}", request.getTestingType(), e);
         }
