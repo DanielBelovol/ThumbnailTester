@@ -25,4 +25,15 @@ public class AESUtil {
 
         return new String(decryptedBytes, "UTF-8");
     }
+
+    public String encrypt(String plainText) throws Exception {
+        byte[] decodedKey = keyAes.getBytes("UTF-8");
+        SecretKeySpec secretKey = new SecretKeySpec(decodedKey, ALGORITHM);
+
+        Cipher cipher = Cipher.getInstance(ALGORITHM);
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey);
+
+        byte[] encryptedBytes = cipher.doFinal(plainText.getBytes("UTF-8"));
+        return Base64.getEncoder().encodeToString(encryptedBytes);
+    }
 }

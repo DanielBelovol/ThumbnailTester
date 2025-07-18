@@ -1,9 +1,11 @@
 package com.example.ThumbnailTester.controller;
 
+import com.example.ThumbnailTester.util.AESUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +23,8 @@ import java.nio.charset.StandardCharsets;
 public class YouTubeAuthController {
 
     private static final Logger log = LoggerFactory.getLogger(YouTubeAuthController.class);
+    @Autowired
+    private AESUtil aesUtil;
 
     @Value("${youtube.client.id}")
     private String clientId;
@@ -42,7 +46,7 @@ public class YouTubeAuthController {
     @PostMapping(value = "/exchange-code", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public RefreshTokenResponse exchangeCodeForRefreshToken(@RequestParam("code") String code) {
         try {
-            String requestBody = "code=" + URLEncoder.encode(code, StandardCharsets.UTF_8)
+            String requestBody = "code=" + URLEncoder.encode(aesUtil.decrypt(code), StandardCharsets.UTF_8)
                     + "&client_id=" + URLEncoder.encode(clientId, StandardCharsets.UTF_8)
                     + "&client_secret=" + URLEncoder.encode(clientSecret, StandardCharsets.UTF_8)
                     + "&redirect_uri=" + URLEncoder.encode(redirectUri, StandardCharsets.UTF_8)
@@ -64,7 +68,7 @@ public class YouTubeAuthController {
 
             if (jsonNode.has("refresh_token")) {
                 String refreshToken = jsonNode.get("refresh_token").asText();
-                return new RefreshTokenResponse(refreshToken, "Successful");
+                return new RefreshTokenResponse(aesUtil.encrypt(refreshToken), "Successful");
             } else if (jsonNode.has("error")) {
                 String error = jsonNode.get("error").asText();
                 String errorDescription = jsonNode.has("error_description") ? jsonNode.get("error_description").asText() : "";
@@ -75,6 +79,9 @@ public class YouTubeAuthController {
         } catch (IOException | InterruptedException e) {
             log.error("Exception during token exchange", e);
             return new RefreshTokenResponse(null, "Exception: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Error with decrypting code");
+            return new RefreshTokenResponse(null, "Error with decrypting code");
         }
     }
 
