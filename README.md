@@ -99,10 +99,6 @@ Analytics statistics for an image option.
 
 ---
 
-Certainly! Here's the English version of the `ThumbnailData` description for your documentation:
-
----
-
 ### `ThumbnailData`
 
 Represents the overall thumbnail test data. Contains information about the video, associated image options, test configuration, and the user who initiated the test.
@@ -168,8 +164,6 @@ Represents the overall thumbnail test data. Contains information about the video
 
 ---
 
-Add this description to your DTO documentation so frontend developers have a complete understanding of the data structure they will send and receive.
-
 ## Example JSON Payloads
 
 ### Example `ThumbnailRequest`
@@ -223,8 +217,6 @@ Add this description to your DTO documentation so frontend developers have a com
 }
 ```
 
-Certainly! Here's the English version of the `.env` instructions you can add to your README:
-
 ---
 
 ## Environment Configuration
@@ -277,6 +269,8 @@ This file is used to configure the application and load environment variables at
 4. **Handle** incoming messages appropriately in the frontend UI.
 5. To **remove** a testing item, send a message to `/app/remove-testingItem` with the image option ID and video URL.
 
+---
+
 ## Running with Docker
 
 If you want to run the application using Docker, make sure you have created the `.env` file as described above, then start the containers with the following command:
@@ -296,3 +290,82 @@ This command will build and start the Docker containers using the environment va
 - The backend expects valid YouTube video URLs and accessible image URLs.
 - Image files must be less than 2 MB and have a 16:9 aspect ratio.
 - User credentials (`googleId` and `refreshToken`) are required for YouTube API authentication.
+
+---
+
+## YouTube OAuth2 Token Exchange API
+
+This application provides an API endpoint to exchange a Google OAuth2 authorization code for a refresh token. This allows your application to obtain long-lived access to YouTube APIs on behalf of a user.
+
+### Endpoint
+
+`POST /api/youtube/exchange-code`
+
+### Description
+
+Exchanges an authorization code obtained from Google OAuth2 for a refresh token.
+
+### Request
+
+- **Content-Type:** `application/x-www-form-urlencoded`
+- **Parameters:**
+    - `code` (string, required): The authorization code received from Google OAuth2 after user consent.
+
+### Response
+
+Returns a JSON object with the following fields:
+
+| Field          | Type   | Description                                  |
+|----------------|--------|----------------------------------------------|
+| `refreshToken` | String | The refresh token if the exchange was successful; otherwise `null`. |
+| `message`      | String | Status message indicating success or error details. |
+
+### Example Request
+
+```bash
+curl -X POST "http://localhost:8080/api/youtube/exchange-code" \
+     -H "Content-Type: application/x-www-form-urlencoded" \
+     -d "code=YOUR_AUTHORIZATION_CODE"
+```
+
+### Example Response (Success)
+
+```json
+{
+  "refreshToken": "1//0gL...your_refresh_token...",
+  "message": "Successful"
+}
+```
+
+### Example Response (Error)
+
+```json
+{
+  "refreshToken": null,
+  "message": "invalid_grant: Bad Request"
+}
+```
+
+### Configuration
+
+Add the following properties to your `application.properties` or `application.yml` file:
+
+```properties
+youtube.client.id=YOUR_GOOGLE_CLIENT_ID
+youtube.client.secret=YOUR_GOOGLE_CLIENT_SECRET
+youtube.redirect.uri=YOUR_REGISTERED_REDIRECT_URI
+```
+
+- `youtube.client.id`: Your Google OAuth2 client ID.
+- `youtube.client.secret`: Your Google OAuth2 client secret.
+- `youtube.redirect.uri`: The redirect URI registered in your Google API Console.
+
+### Notes
+
+- The endpoint uses Java's built-in `HttpClient` to communicate with Google's OAuth2 token endpoint.
+- The refresh token is only returned if the authorization code is valid and the client credentials are correct.
+- Handle the refresh token securely as it grants long-term access to the user's YouTube account.
+
+---
+
+If you want me to help you generate a full standalone README or add more sections, just ask!
