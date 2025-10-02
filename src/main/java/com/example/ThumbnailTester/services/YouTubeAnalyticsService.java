@@ -43,14 +43,11 @@ public class YouTubeAnalyticsService {
 
     private static final JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
 
-    // Constants for URLs and endpoints
     private static final String YOUTUBE_ANALYTICS_API_URL = "https://youtubeanalytics.googleapis.com/v2/reports";
     private static final String OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token";
 
-    // WebSocket topic
     private static final String TOPIC_ERROR = "/topic/thumbnail/error";
 
-    // Error messages
     private static final String ERR_NO_ACTIVE_THUMBNAIL = "No active thumbnail found for user";
     private static final String ERR_FAILED_REFRESH_TOKEN = "Failed to refresh access token";
     private static final String ERR_NO_DATA_FOR_VIDEO = "No data available for video";
@@ -61,14 +58,6 @@ public class YouTubeAnalyticsService {
         this.messagingTemplate = messagingTemplate;
     }
 
-    /**
-     * Retrieves YouTube analytics statistics for a given thumbnail.
-     *
-     * @param user               the user requesting stats
-     * @param startDate          the start date for the analytics query
-     * @param thumbnailQueueItem the thumbnail queue item containing video info
-     * @return ThumbnailStats object with analytics data or empty stats if none available
-     */
     public ThumbnailStats getStats(UserData user, LocalDate startDate, ThumbnailQueueItem thumbnailQueueItem) {
         if (thumbnailQueueItem == null) {
             sendError(ERR_NO_ACTIVE_THUMBNAIL);
@@ -84,7 +73,7 @@ public class YouTubeAnalyticsService {
             }
 
             String uri = String.format(
-                    "%s?ids=channel==MINE&startDate=%s&endDate=%s&metrics=views,impressions,averageViewDuration,comments,shares,likes,subscribersGained,averageViewPercentage,estimatedMinutesWatched&dimensions=video&filters=video==%s",
+                    "%s?ids=channel==MINE&startDate=%s&endDate=%s&metrics=views,averageViewDuration,comments,shares,likes,subscribersGained,averageViewPercentage,estimatedMinutesWatched&dimensions=video&filters=video==%s",
                     YOUTUBE_ANALYTICS_API_URL, startDate, LocalDate.now(), videoId);
 
             HttpRequest request = HttpRequest.newBuilder()
@@ -109,33 +98,25 @@ public class YouTubeAnalyticsService {
 
             JsonNode row = rows.get(0);
 
-            // Parse metrics from response
             Integer views = toInt(row.path(0));
-            Integer impressions = toInt(row.path(1));
-            Double averageViewDuration = toDouble(row.path(2));
-            Integer comments = toInt(row.path(3));
-            Integer shares = toInt(row.path(4));
-            Integer likes = toInt(row.path(5));
-            Integer subscribersGained = toInt(row.path(6));
-            Double averageViewPercentage = toDouble(row.path(7));
-            Long totalWatchTime = toLong(row.path(8));
+            Double averageViewDuration = toDouble(row.path(1));
+            Integer comments = toInt(row.path(2));
+            Integer shares = toInt(row.path(3));
+            Integer likes = toInt(row.path(4));
+            Integer subscribersGained = toInt(row.path(5));
+            Double averageViewPercentage = toDouble(row.path(6));
+            Long totalWatchTime = toLong(row.path(7));
 
-            // Calculate CTR (Click-Through Rate)
-            Double ctr = calculateCTR(impressions, views);
-
-            // Retrieve old stats or initialize empty
             ThumbnailStats oldStats = thumbnailQueueItem.getImageOption().getThumbnailStats();
             if (oldStats == null) {
                 oldStats = fillEmptyStats(new ThumbnailStats(), thumbnailQueueItem);
             }
 
-            // Prepare new stats object
             ThumbnailStats newStats = new ThumbnailStats();
             if (oldStats != null) {
                 newStats.setId(oldStats.getId());
             }
             newStats.setViews(views);
-            newStats.setImpressions(impressions);
             newStats.setAverageViewDuration(averageViewDuration);
             newStats.setComments(comments);
             newStats.setShares(shares);
@@ -144,7 +125,6 @@ public class YouTubeAnalyticsService {
             newStats.setAverageViewPercentage(averageViewPercentage);
             newStats.setTotalWatchTime(totalWatchTime);
 
-            // Calculate difference between new and old stats
             ThumbnailStats currentStats = calculateStatsDifference(newStats, oldStats);
             thumbnailQueueItem.getImageOption().setThumbnailStats(currentStats);
 
@@ -163,26 +143,6 @@ public class YouTubeAnalyticsService {
         return emptyStats;
     }
 
-    /**
-     * Calculates Click-Through Rate (CTR).
-     *
-     * @param impressions number of impressions
-     * @param views       number of views
-     * @return CTR percentage or 0.0 if data is insufficient
-     */
-    private Double calculateCTR(Integer impressions, Integer views) {
-        if (impressions == null || impressions == 0 || views == null || views == 0) {
-            return 0.0;
-        }
-        return (double) views / impressions * 100;
-    }
-
-    /**
-     * Refreshes the OAuth2 access token using the refresh token.
-     *
-     * @param refreshToken the refresh token
-     * @return new access token or null if failed
-     */
     public String refreshAccessToken(String refreshToken) {
         try {
             log.info("Refreshing access token");
@@ -216,25 +176,16 @@ public class YouTubeAnalyticsService {
         }
     }
 
-    /**
-     * Calculates the difference between two ThumbnailStats objects.
-     *
-     * @param later   the more recent stats
-     * @param earlier the older stats
-     * @return a ThumbnailStats object representing the difference
-     */
     public ThumbnailStats calculateStatsDifference(ThumbnailStats later, ThumbnailStats earlier) {
         ThumbnailStats diff = new ThumbnailStats();
         diff.setViews(safeSubtract(later.getViews(), earlier.getViews()));
-        diff.setImpressions(safeSubtract(later.getImpressions(), earlier.getImpressions()));
-        diff.setAverageViewDuration(later.getAverageViewDuration()); // keep latest or calculate weighted average
+        diff.setAverageViewDuration(later.getAverageViewDuration());
         diff.setComments(safeSubtract(later.getComments(), earlier.getComments()));
         diff.setShares(safeSubtract(later.getShares(), earlier.getShares()));
         diff.setLikes(safeSubtract(later.getLikes(), earlier.getLikes()));
         diff.setSubscribersGained(safeSubtract(later.getSubscribersGained(), earlier.getSubscribersGained()));
-        diff.setAverageViewPercentage(later.getAverageViewPercentage()); // keep latest or calculate weighted average
+        diff.setAverageViewPercentage(later.getAverageViewPercentage());
         diff.setTotalWatchTime(safeSubtractLong(later.getTotalWatchTime(), earlier.getTotalWatchTime()));
-        diff.setCtr(calculateCTR(diff.getImpressions(), diff.getViews()));
         return diff;
     }
 
@@ -248,12 +199,6 @@ public class YouTubeAnalyticsService {
         return Math.max(0L, a - b);
     }
 
-    /**
-     * Extracts the video ID from a YouTube URL.
-     *
-     * @param url the full YouTube video URL
-     * @return the video ID or the original URL if no ID found
-     */
     private String extractVideoIdFromUrl(String url) {
         if (url.contains("v=")) {
             return url.split("v=")[1].split("&")[0];
@@ -276,16 +221,8 @@ public class YouTubeAnalyticsService {
         return node.asLong();
     }
 
-    /**
-     * Fills a ThumbnailStats object with zero/default values.
-     *
-     * @param stats              the stats object to fill
-     * @param thumbnailQueueItem the related thumbnail queue item
-     * @return the filled stats object
-     */
     private ThumbnailStats fillEmptyStats(ThumbnailStats stats, ThumbnailQueueItem thumbnailQueueItem) {
         stats.setViews(0);
-        stats.setImpressions(0);
         stats.setAverageViewDuration(0.0);
         stats.setComments(0);
         stats.setShares(0);
@@ -293,7 +230,6 @@ public class YouTubeAnalyticsService {
         stats.setSubscribersGained(0);
         stats.setAverageViewPercentage(0.0);
         stats.setTotalWatchTime(0L);
-        stats.setCtr(0.0);
 
         stats.setImageOption(thumbnailQueueItem.getImageOption());
         return stats;

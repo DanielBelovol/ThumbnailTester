@@ -8,7 +8,6 @@ public class StatsRequest {
 
     private Integer views;
     private Double ctr;
-    private Integer impressions;
     private Double averageViewDuration;
     private Double advCtr;
     private Integer comments;
@@ -26,7 +25,6 @@ public class StatsRequest {
                 "videoUrl='" + videoUrl + '\'' +
                 ", views=" + views +
                 ", ctr=" + ctr +
-                ", impressions=" + impressions +
                 ", averageViewDuration=" + averageViewDuration +
                 ", advCtr=" + advCtr +
                 ", comments=" + comments +

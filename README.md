@@ -87,7 +87,6 @@ Analytics statistics for an image option.
 | `imageOption`          | `ImageOption` | Back-reference to image option|
 | `views`               | `Integer`| Number of views                             |
 | `ctr`                 | `Double` | Click-through rate                          |
-| `impressions`         | `Integer`| Number of impressions                       |
 | `averageViewDuration` | `Double` | Average view duration (seconds)             |
 | `advCtr`              | `Double` | Advanced CTR metric                          |
 | `comments`            | `Integer`| Number of comments                          |
@@ -127,7 +126,6 @@ Represents the overall thumbnail test data. Contains information about the video
       "thumbnailStats": {
         "views": 1000,
         "ctr": 5.5,
-        "impressions": 18000,
         "averageViewDuration": 45.3,
         "advCtr": 3.2,
         "comments": 10,
@@ -204,7 +202,6 @@ Represents the overall thumbnail test data. Contains information about the video
   "thumbnailStats": {
     "views": 1000,
     "ctr": 5.5,
-    "impressions": 18000,
     "averageViewDuration": 45.3,
     "advCtr": 3.2,
     "comments": 10,

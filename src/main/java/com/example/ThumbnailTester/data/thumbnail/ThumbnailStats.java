@@ -24,7 +24,6 @@ public class ThumbnailStats {
 
     private Integer views;
     private Double ctr;
-    private Integer impressions;
     private Double averageViewDuration;
     private Double advCtr;
     private Integer comments;

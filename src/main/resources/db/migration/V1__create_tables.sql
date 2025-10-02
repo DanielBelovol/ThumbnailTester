@@ -34,7 +34,6 @@ CREATE TABLE thumbnail_stats
     thumbnail_id            BIGINT NOT NULL,
     views                   INT,
     ctr                     DOUBLE PRECISION,
-    impressions             INT,
     average_view_duration   DOUBLE PRECISION,
     adv_ctr                 DOUBLE PRECISION,
     comments                INT,

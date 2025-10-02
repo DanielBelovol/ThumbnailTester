@@ -327,7 +327,6 @@ public class ThumbnailTestService {
         ThumbnailStats stats = new ThumbnailStats();
         stats.setViews(0);
         stats.setCtr(0.0);
-        stats.setImpressions(0);
         stats.setAverageViewDuration(0.0);
         stats.setAdvCtr(0.0);
         stats.setComments(0);
