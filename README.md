@@ -200,7 +200,7 @@ Represents the overall thumbnail test data. Contains information about the video
   "text": "Sample text",
   "isWinner": false,
   "thumbnailStats": {
-    "views": 1000,
+    "views": 100,
     "ctr": 5.5,
     "averageViewDuration": 45.3,
     "advCtr": 3.2,
