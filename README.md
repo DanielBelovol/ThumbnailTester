@@ -365,4 +365,3 @@ youtube.redirect.uri=YOUR_REGISTERED_REDIRECT_URI
 
 ---
 
-If you want me to help you generate a full standalone README or add more sections, just ask!
